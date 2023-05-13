@@ -1,0 +1,57 @@
+# This is for downloading and processing the .nc files from GridMET: https://www.climatologylab.org/gridmet.html
+# I used the second option '2. Create wget script for downloading NetCDF files' for this: https://www.climatologylab.org/wget-gridmet.html
+library(raster)
+library(rasterVis)
+library(ncdf4)
+library(lattice)
+library(stringr)
+library(raster)
+library(sf)
+library(dplyr)
+
+# Necessary Folders
+path_start = "data/" #change as needed - I set my project directory to the same folder as the data
+path_final = "tiffs/"
+path_cropped = "final_data/"
+
+# Naming Conventions
+file_ver = 'V5GL03.HybridPM25.NorthAmerica.' #generic name of NetCDF file from Randall Martin's dataset 
+file_ver_e = 'V5GL03.HybridPM25E.NorthAmerica.' #generic name of NetCDF Error file from Randall Martin's dataset 
+file_ver_co = "V5GL03.HybridPM25.Colorado."
+file_ver_er = "V5GL03.HybridPM25E.Colorado."
+
+#Checking to make sure folders exist - creating folders if necessary
+ifelse(dir.exists(path_start),"Data folder is present",
+       "You need to download the data from GridMET and move it into the 'data' folder.")
+ifelse(dir.exists(path_final), "Folder to save files to exists, proceeding...", dir.create(path_final))
+ifelse(dir.exists(path_cropped), "Folder to save cropped files to exists, proceeding...", dir.create(path_cropped))
+
+# Input Files
+input_nc = list.files(path_start) # making 14 varialbes so there are 14 NetCDFs
+#Mapping Shapefile
+prj="EPSG:4326"
+co_bound = st_as_sf(USAboundaries::us_states(states="Colorado"), crs=raster::crs(prj))
+
+for (x in input_nc){
+  ncfile =  ncdf4::nc_open(paste0(path_start,x))
+  varname = names(ncfile$var)
+  nc2raster = stack(raster(paste0(path_start,x),varname = varname,band = 1))
+  nm = gsub(".nc","",x)
+  output = paste0(path_final,nm,".tiff")
+  writeRaster(nc2raster,output,format = 'GTiff',overwrite = TRUE)
+}
+
+input_tiffs = list.files(path_final)
+for (x in input_tiffs) {
+  r = raster(paste0(path_final,x))
+  crop = crop(r,co_bound)
+  nm = gsub(".tiff","",x)
+  output = paste0(path_cropped,nm,".tiff")
+  writeRaster(crop,output,format = 'GTiff',overwrite = TRUE)
+}
+
+# A quick check
+test = raster(paste0(path_final,list.files(path_final)[1]))
+plot(test)
+test2 = raster(paste0(path_cropped,list.files(path_cropped)[1]))
+plot(test2)
