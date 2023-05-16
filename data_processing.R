@@ -14,12 +14,6 @@ path_start = "data/" #change as needed - I set my project directory to the same 
 path_final = "tiffs/"
 path_cropped = "final_data/"
 
-# Naming Conventions
-file_ver = 'V5GL03.HybridPM25.NorthAmerica.' #generic name of NetCDF file from Randall Martin's dataset 
-file_ver_e = 'V5GL03.HybridPM25E.NorthAmerica.' #generic name of NetCDF Error file from Randall Martin's dataset 
-file_ver_co = "V5GL03.HybridPM25.Colorado."
-file_ver_er = "V5GL03.HybridPM25E.Colorado."
-
 #Checking to make sure folders exist - creating folders if necessary
 ifelse(dir.exists(path_start),"Data folder is present",
        "You need to download the data from GridMET and move it into the 'data' folder.")
