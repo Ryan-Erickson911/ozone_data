@@ -44,8 +44,34 @@ for (x in input_tiffs) {
   writeRaster(crop,output,format = 'GTiff',overwrite = TRUE)
 }
 
+# Temperature Conversion - 12 layer NC file
+# download from: http://thredds.northwestknowledge.net:8080/thredds/catalog/TERRACLIMATE_ALL/data/catalog.html
+
+folder_name = "TerraClim_tmax_2017-2022/" #name of the folder you moved the terra climate data into
+final_folder_name = "temperatures/" #name of the folder you moved the terra climate data into
+input_temp_ncs = list.files(paste0(path_start,folder_name)) # making 14 variables so there are 14 NetCDFs
+
+for (x in input_temp_ncs){
+  ncfile =  ncdf4::nc_open(paste0(path_start,folder_name,x))
+  varnames=format(as.Date(ncfile$dim$time$val, origin=as.Date("1900-01-01")),"%b.%Y")
+  nc2raster=stack(brick(paste0(path_start,folder_name,x)))
+  names(nc2raster)=varnames
+  nm = gsub(".nc","",x)
+  output = paste0(path_final,final_folder_name,nm,".tiff")
+  writeRaster(nc2raster,output,format = 'GTiff',overwrite = TRUE)
+}
+
+input_tiffs = list.files(paste0(path_final,final_folder_name))
+for (x in input_tiffs) {
+  r = raster(paste0(path_final,final_folder_name,x))
+  crop = crop(r,co_bound)
+  nm = gsub(".tiff","",x)
+  output = paste0(path_cropped,nm,".tiff")
+  writeRaster(crop,output,format = 'GTiff',overwrite = TRUE)
+}
+
 # A quick check
-test = raster(paste0(path_final,list.files(path_final)[1]))
+test = raster(paste0(path_final,final_folder_name,list.files(paste0(path_final,final_folder_name)))[1])
 plot(test)
-test2 = raster(paste0(path_cropped,list.files(path_cropped)[1]))
+test2 = raster(paste0(path_cropped,list.files(path_cropped)[11]))
 plot(test2)
