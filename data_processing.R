@@ -74,4 +74,4 @@ for (x in input_tiffs) {
 test = raster(paste0(path_final,final_folder_name,list.files(paste0(path_final,final_folder_name)))[1])
 plot(test)
 test2 = raster(paste0(path_cropped,list.files(path_cropped)[11]))
-plot(test2)
+plot(test2, main="Mean Temperature for CO (Celsius): April 2018")
