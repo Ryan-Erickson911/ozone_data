@@ -11,6 +11,30 @@ library(dplyr)
 
 # Necessary Folders
 path_start = "data/" #change as needed - I set my project directory to the same folder as the data
+# Data: http://thredds.northwestknowledge.net:8080/thredds/reacch_climate_MET_aggregated_catalog.html
+# Random Forest Variables
+
+# Spatial Variables:
+# Dist to nearest Road - 
+# sum of roads in 500m buffer - 
+# lat - 
+# long - 
+# elevation -
+
+# Temporal Variables:
+# monthly dummy variable -
+# yearly dummy variable -
+
+# Spatio-Temporal Variables:
+# yearly NDVI - Average NDVI 500m buffer - need buffer data is ready
+# Monthly mode of wind direction
+# Monthly total precip
+
+
+# Monthly max tmep
+# Monthly max rh 
+# Monthly wind speed
+
 path_final = "tiffs/"
 path_cropped = "final_data/"
 
