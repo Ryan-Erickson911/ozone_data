@@ -17,13 +17,14 @@ ifelse(dir.exists(path_cropped), "Folder to save cropped files to already exists
 # Input Files
 input_nc = list.files(path_start)
 averages = grep("th_",input_nc, invert=TRUE, value=TRUE)
+rh_now = grep("rmax_",input_nc, value=TRUE)
 modes = grep("th_",input_nc, value=TRUE)
 #Mapping Shapefile
 usab_prj="EPSG:4326"
 co_bound = st_as_sf(USAboundaries::us_states(states="Colorado"), crs=raster::crs(usab_prj))
 
 #Averages
-for (x in averages){
+for (x in rh_now){
   ncfile =  ncdf4::nc_open(paste0(path_start,x))
   varnames = format(as.Date(ncfile$dim$day$vals, origin=as.Date("1900-01-01")),"%b.%d.%Y")
   nc2raster = stack(paste0(path_start,x))
@@ -59,12 +60,12 @@ for (x in averages){
   output_mo = paste0(path_cropped,"Monthly/",nm,"_monthly_avg.tiff")
   writeRaster(crop_monthly,output_mo,format = 'GTiff',overwrite = TRUE)
 
-  yearly_average=mean(nc2raster)
-  writeRaster(yearly_average,yearly,format = 'GTiff',overwrite = TRUE)
-
-  crop_yearly = crop(yearly_average,co_bound)
-  output_yr = paste0(path_cropped,"Yearly/",nm,"_yearly_avg.tiff")
-  writeRaster(crop_yearly,output_yr,format = 'GTiff',overwrite = TRUE)
+  # yearly_average=mean(nc2raster)
+  # writeRaster(yearly_average,yearly,format = 'GTiff',overwrite = TRUE)
+  # 
+  # crop_yearly = crop(yearly_average,co_bound)
+  # output_yr = paste0(path_cropped,"Yearly/",nm,"_yearly_avg.tiff")
+  # writeRaster(crop_yearly,output_yr,format = 'GTiff',overwrite = TRUE)
 }
 
 # Modes

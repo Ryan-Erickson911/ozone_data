@@ -1,5 +1,12 @@
 # This is for downloading and processing the .nc files from GridMET: https://www.climatologylab.org/gridmet.html
 # I used the second option '2. Create wget script for downloading NetCDF files' for this: https://www.climatologylab.org/wget-gridmet.html
+
+
+# "Leave one out" cross validation
+# 
+
+
+
 library(raster)
 library(rasterVis)
 library(ncdf4)
@@ -69,6 +76,7 @@ o3_projected$elev=round(raster::extract(elevation_projected,o3_projected),2)
 # Monthly mode of wind direction
 # Monthly total precip
 # Monthly max tmep
+# Monthly RH 
 # added_tiffs_list -> for identifying correct tiffs
 max_temperature_to_add = raster(paste0(path_to_data_folder,added_tiffs_list[15]))
 max_temperature_projected = raster::projectRaster(max_temperature_to_add, crs=prg)
