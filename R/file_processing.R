@@ -9,9 +9,9 @@ ifelse(dir.exists(path_final), "Folder to save files to already exists, proceedi
 ifelse(dir.exists(paste0(path_final,"Daily/")), "Folder to save Daily files to already exists, proceeding...", dir.create(paste0(path_final,"Daily/")))
 ifelse(dir.exists(paste0(path_final,"Monthly/")), "Folder to save Monthly files to already exists, proceeding...", dir.create(paste0(path_final,"Monthly/")))
 ifelse(dir.exists(paste0(path_final,"Yearly/")), "Folder to save Yearly files to already exists, proceeding...", dir.create(paste0(path_final,"Yearly/")))
-ifelse(dir.exists(paste0(path_cropped,"Daily/")), "Folder to save final Daily files to already exists, proceeding...", dir.create(paste0(path_cropped,"Daily/")))
-ifelse(dir.exists(paste0(path_cropped,"Monthly/")), "Folder to save final Monthly files to already exists, proceeding...", dir.create(paste0(path_cropped,"Monthly/")))
-ifelse(dir.exists(paste0(path_cropped,"Yearly/")), "Folder to save final Yearly files to already exists, proceeding...", dir.create(paste0(path_cropped,"Yearly/")))
+ifelse(dir.exists(paste0(path_cropped,"Daily_Averages/")), "Folder to save final Daily files to already exists, proceeding...", dir.create(paste0(path_cropped,"Daily/")))
+ifelse(dir.exists(paste0(path_cropped,"Monthly_Averages/")), "Folder to save final Monthly files to already exists, proceeding...", dir.create(paste0(path_cropped,"Monthly/")))
+ifelse(dir.exists(paste0(path_cropped,"Yearly_Averages/")), "Folder to save final Yearly files to already exists, proceeding...", dir.create(paste0(path_cropped,"Yearly/")))
 ifelse(dir.exists(path_cropped), "Folder to save cropped files to already exists, proceeding...", dir.create(path_cropped))
 
 # Input Files
@@ -24,7 +24,7 @@ usab_prj="EPSG:4326"
 co_bound = st_as_sf(USAboundaries::us_states(states="Colorado"), crs=raster::crs(usab_prj))
 
 #Averages
-for (x in rh_now){
+for (x in averages){
   ncfile =  ncdf4::nc_open(paste0(path_start,x))
   varnames = format(as.Date(ncfile$dim$day$vals, origin=as.Date("1900-01-01")),"%b.%d.%Y")
   nc2raster = stack(paste0(path_start,x))

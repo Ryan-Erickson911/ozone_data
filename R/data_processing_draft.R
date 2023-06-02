@@ -10,20 +10,17 @@ library(sf)
 library(dplyr)
 
 #### Special R Document 
-source("ozone_krige.R") #need change for mac when applicable
+source("R/ozone_krige.R") #need change for mac when applicable
 # Necessary Folders
-path_start = "data/" #change as needed - I set my project directory to the same folder as the data
 # Data: http://thredds.northwestknowledge.net:8080/thredds/reacch_climate_MET_aggregated_catalog.html
-path_to_cropped_data = "final_data/"  #need change for mac when applicable
-data_list = list.files(path_start)
-co_data_list = list.files(path_to_cropped_data)
+co_data_list = list.files("final_data/")
 # Random Forest Variables
 # Spatial Variables:
 
 ### Dist to nearest Road -  
 getting_folders = grep("co_roads_2019", co_data_list, value = T)
 road_shp_file = "co_roads_2019.shp"
-path_to_roads = paste0(path_to_cropped_data,getting_folders,"/")
+path_to_roads = paste0("final_data/",getting_folders,"/")
 # C = County
 
 # I = Interstate
@@ -76,7 +73,7 @@ summer_o3$long
 # make a 1 for each year of interest and a 0 for other years
 
 # Spatio-Temporal Variables:
-new_path = "final_data/Monthly/"
+new_path = "final_data/Monthly_Averages/"
 monthly_path = list.files(paste0(new_path))
 max_rh_files=grep("rmax_",monthly_path, value = T)
 max_temp_files=grep("tmmx_",monthly_path, value = T)
@@ -97,9 +94,6 @@ LA=summer_o3[which(summer_o3$site_name=="La Casa"),]
 NREL=summer_o3[which(summer_o3$site_name=="National Renewable Energy Labs - Nrel"),]
 RF=summer_o3[which(summer_o3$site_name=="Rocky Flats-N"),]
 WY=summer_o3[which(summer_o3$site_name=="Welby"),]
-
-# yearly NDVI - Average NDVI 500m buffer - need buffer data is ready
-co_poin
 
 ################################################# Monthly total precip
 
@@ -167,6 +161,34 @@ summer_max_rh =summer_max_rh[[c(grep("Apr", names(summer_max_rh)),
                                 grep("Aug", names(summer_max_rh)),
                                 grep("Sep", names(summer_max_rh)),
                                 grep("Oct", names(summer_max_rh)))]]
+
+################################################## yearly NDVI - Average NDVI 500m buffer - need buffer data is ready
+ndvi_folder = "NDVIs"
+ndvi_path = list.dirs(paste0(path_to_cropped_data,ndvi_folder))[-1]
+ndvi_files = paste0(ndvi_path,"/den_CO_NDVI_",2018:2022,".tif")
+ndvi_2018 = raster(ndvi_files[1])
+ndvi_2018_projected = raster::projectRaster(ndvi_2018, crs=prg)
+ndvi_2019 = raster(ndvi_files[2])
+ndvi_2019_projected = raster::projectRaster(ndvi_2018, crs=prg)
+ndvi_2020 = raster(ndvi_files[3])
+ndvi_2020_projected = raster::projectRaster(ndvi_2018, crs=prg)
+ndvi_2021 = raster(ndvi_files[4])
+ndvi_2021_projected = raster::projectRaster(ndvi_2018, crs=prg)
+ndvi_2022 = raster(ndvi_files[5])
+ndvi_2022_projected = raster::projectRaster(ndvi_2018, crs=prg)
+
+extract(ndvi_2018_projected,)
+
+
+#plot
+# plot(ndvi_2018_projected)
+
+
+
+output_mo = paste0(path_cropped,"Monthly_Averages/",nm,"_monthly_avg.tiff")
+writeRaster(crop_monthly,output_mo,format = 'GTiff',overwrite = TRUE)
+extract(ndvi_2018,o3_500m_projected)
+
 ##################################################  Exposure Assignment
 for(i in 1:nrow(AE)) {
   AE$tmax[i] = extract(summer_max_temps[[i]],AE[i,])
@@ -217,4 +239,12 @@ ggs %>%
 
 # Monthly mode of wind direction -> omiting this but not deleting because I may come back to it
 
-# Still Need: RF Model, "Leave one out" cross validation
+# Still Need: 
+# yearly NDVI - Average NDVI 500m buffer - need buffer data is ready
+# Temporal Variables: -> Can't do dummy variables until pivoted? (easiest method off top of head)
+# monthly dummy variable -
+# make a 1 for each month of interest and a 0 for other months
+# yearly dummy variable -
+# make a 1 for each year of interest and a 0 for other years
+# Monthly mode of wind direction -> omitting this but not deleting because I may come back to it
+# RF Model, "Leave one out" cross validation
