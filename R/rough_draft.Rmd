@@ -258,13 +258,14 @@ ggs %>%
 
 # Still Need: 
 
-\begin{center}
-- yearly NDVI - Average NDVI 500m buffer - need buffer data is ready
+- yearly NDVI: Average NDVI 500m buffer - need buffer data is ready
+
 - Temporal Variables 
-- monthly dummy variable -
-- make a 1 for each month of interest and a 0 for other months
-- yearly dummy variable -
-- make a 1 for each year of interest and a 0 for other years
+
+- monthly dummy variable
+
+- yearly dummy variable
+
 - Monthly mode of wind direction -> omitting this but not deleting because I may come back to it
+
 - RF Model, "Leave one out" cross validation
-\end{center}
