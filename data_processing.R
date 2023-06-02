@@ -17,6 +17,7 @@ library(sf)
 library(dplyr)
 source("../geocoding_addresses/R/ozone_krige.R")
 
+
 # Necessary Folders
 path_start = "data/" #change as needed - I set my project directory to the same folder as the data
 # Data: http://thredds.northwestknowledge.net:8080/thredds/reacch_climate_MET_aggregated_catalog.html
@@ -52,6 +53,7 @@ add_road_buffer = read_csv("../geocoding_addresses/data/roads_in_500m_buffer.csv
 names(add_road_buffer) = c("site_name","road_length")
 add_road_buffer$site_name=toupper(add_road_buffer$site_name)
 add_road_buffer$road_length=ifelse(is.na(add_road_buffer$road_length),0,add_road_buffer$road_length)
+o3_projected = left_join(o3_projected, add_road_buffer, by="site_name")
 
 # lat 
 o3_projected@coords[,"lat"]
@@ -72,11 +74,20 @@ o3_projected$elev=round(raster::extract(elevation_projected,o3_projected),2)
 # make a 1 for each year of interest and a 0 for other years
 
 # Spatio-Temporal Variables:
+new_path = "final_data/Monthly/"
+monthly_path = list.files(paste0(new_path))
+
 # yearly NDVI - Average NDVI 500m buffer - need buffer data is ready
-# Monthly mode of wind direction
+co_poin
+
 # Monthly total precip
+
 # Monthly max tmep
+
 # Monthly RH 
+
+
+# Monthly mode of wind direction -> omiting this but not deleting because I may come back to it
 # added_tiffs_list -> for identifying correct tiffs
 max_temperature_to_add = raster(paste0(path_to_data_folder,added_tiffs_list[15]))
 max_temperature_projected = raster::projectRaster(max_temperature_to_add, crs=prg)

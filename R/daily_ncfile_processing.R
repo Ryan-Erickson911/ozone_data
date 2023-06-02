@@ -24,7 +24,7 @@ usab_prj="EPSG:4326"
 co_bound = st_as_sf(USAboundaries::us_states(states="Colorado"), crs=raster::crs(usab_prj))
 
 #Averages
-for (x in rh_now){
+for (x in averages){
   ncfile =  ncdf4::nc_open(paste0(path_start,x))
   varnames = format(as.Date(ncfile$dim$day$vals, origin=as.Date("1900-01-01")),"%b.%d.%Y")
   nc2raster = stack(paste0(path_start,x))
