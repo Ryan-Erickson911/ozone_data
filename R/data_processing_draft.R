@@ -1,5 +1,8 @@
 # This is for downloading and processing the .nc files from GridMET: https://www.climatologylab.org/gridmet.html
 # I used the second option '2. Create "wget script" -> might take this out
+
+# Carful when running this, the reprojeciton takes a long time. 
+
 library(raster)
 library(rasterVis)
 library(ncdf4)
@@ -95,6 +98,12 @@ NREL=summer_o3[which(summer_o3$site_name=="National Renewable Energy Labs - Nrel
 RF=summer_o3[which(summer_o3$site_name=="Rocky Flats-N"),]
 WY=summer_o3[which(summer_o3$site_name=="Welby"),]
 
+ndvi_sort_2018=summer_o3[grep(".2018",summer_o3$date),c("site_name","date")]
+ndvi_sort_2019=summer_o3[grep(".2019",summer_o3$date),c("site_name","date")]
+ndvi_sort_2020=summer_o3[grep(".2020",summer_o3$date),c("site_name","date")]
+ndvi_sort_2021=summer_o3[grep(".2021",summer_o3$date),c("site_name","date")]
+ndvi_sort_2022=summer_o3[grep(".2022",summer_o3$date),c("site_name","date")]
+
 ################################################# Monthly total precip
 
 max_precip_to_add = stack(paste0(new_path,max_precip_files)) # create stack of raster bricks (each "stack" is a year, each "brick" is a month)
@@ -162,89 +171,206 @@ summer_max_rh =summer_max_rh[[c(grep("Apr", names(summer_max_rh)),
                                 grep("Sep", names(summer_max_rh)),
                                 grep("Oct", names(summer_max_rh)))]]
 
-################################################## yearly NDVI - Average NDVI 500m buffer - need buffer data is ready
+################################################## yearly NDVI - Average NDVI 500m buffer - run comments if ndvi is not projected
+# ndvi_folder = "NDVIs"
+# ndvi_path = list.dirs(paste0("final_data/",ndvi_folder))[-1]
+# ndvi_files = paste0(ndvi_path,"/den_CO_NDVI_",2018:2022,".tif")
+# ndvi_2018 = raster(ndvi_files[1])
+# ndvi_2018_projected = raster::projectRaster(ndvi_2018, crs=prg)
+# writeRaster(ndvi_2018_projected, paste0(ndvi_path[1],"/co_ndvi_",2018,"projected.tif"), overwrite=T)
+# ndvi_2019 = raster(ndvi_files[2])
+# ndvi_2019_projected = raster::projectRaster(ndvi_2019, crs=prg)
+# writeRaster(ndvi_2019_projected, paste0(ndvi_path[2],"/co_ndvi_",2019,"projected.tif"), overwrite=T)
+# ndvi_2020 = raster(ndvi_files[3])
+# ndvi_2020_projected = raster::projectRaster(ndvi_2020, crs=prg)
+# writeRaster(ndvi_2020_projected, paste0(ndvi_path[3],"/co_ndvi_",2020,"projected.tif"), overwrite=T)
+# ndvi_2021 = raster(ndvi_files[4])
+# ndvi_2021_projected = raster::projectRaster(ndvi_2021, crs=prg)
+# writeRaster(ndvi_2021_projected, paste0(ndvi_path[4],"/co_ndvi_",2021,"projected.tif"), overwrite=T)
+# ndvi_2022 = raster(ndvi_files[5])
+# ndvi_2022_projected = raster::projectRaster(ndvi_2022, crs=prg)
+# writeRaster(ndvi_2022_projected, paste0(ndvi_path[5],"/co_ndvi_",2022,"projected.tif"), overwrite=T)
 ndvi_folder = "NDVIs"
-ndvi_path = list.dirs(paste0(path_to_cropped_data,ndvi_folder))[-1]
+ndvi_path = list.dirs(paste0("final_data/",ndvi_folder))[-1]
 ndvi_files = paste0(ndvi_path,"/den_CO_NDVI_",2018:2022,".tif")
-ndvi_2018 = raster(ndvi_files[1])
-ndvi_2018_projected = raster::projectRaster(ndvi_2018, crs=prg)
-ndvi_2019 = raster(ndvi_files[2])
-ndvi_2019_projected = raster::projectRaster(ndvi_2018, crs=prg)
-ndvi_2020 = raster(ndvi_files[3])
-ndvi_2020_projected = raster::projectRaster(ndvi_2018, crs=prg)
-ndvi_2021 = raster(ndvi_files[4])
-ndvi_2021_projected = raster::projectRaster(ndvi_2018, crs=prg)
-ndvi_2022 = raster(ndvi_files[5])
-ndvi_2022_projected = raster::projectRaster(ndvi_2018, crs=prg)
+ndvi_2018_projected = raster(paste0(ndvi_path[1],"/co_ndvi_",2018,"projected.tif"))
+ndvi_2019_projected = raster(paste0(ndvi_path[2],"/co_ndvi_",2019,"projected.tif"))
+ndvi_2020_projected = raster(paste0(ndvi_path[3],"/co_ndvi_",2020,"projected.tif"))
+ndvi_2021_projected = raster(paste0(ndvi_path[4],"/co_ndvi_",2021,"projected.tif"))
+ndvi_2022_projected = raster(paste0(ndvi_path[5],"/co_ndvi_",2022,"projected.tif"))
 
-extract(ndvi_2018_projected,)
+# Replacing values less than 0 - need new value
+values(ndvi_2018_projected)=ifelse(values(ndvi_2018_projected)<0,0,values(ndvi_2018_projected))
+values(ndvi_2019_projected)=ifelse(values(ndvi_2019_projected)<0,0,values(ndvi_2019_projected))
+values(ndvi_2020_projected)=ifelse(values(ndvi_2020_projected)<0,0,values(ndvi_2020_projected))
+values(ndvi_2021_projected)=ifelse(values(ndvi_2021_projected)<0,0,values(ndvi_2021_projected))
+values(ndvi_2022_projected)=ifelse(values(ndvi_2022_projected)<0,0,values(ndvi_2022_projected))
 
-
+ndvi_sort_2018$ndvi = raster::extract(ndvi_2018_projected,ndvi_sort_2018)
+ndvi_sort_2019$ndvi = raster::extract(ndvi_2019_projected,ndvi_sort_2019)
+ndvi_sort_2020$ndvi = raster::extract(ndvi_2020_projected,ndvi_sort_2020)
+ndvi_sort_2021$ndvi = raster::extract(ndvi_2021_projected,ndvi_sort_2021)
+ndvi_sort_2022$ndvi = raster::extract(ndvi_2022_projected,ndvi_sort_2022)
+ndvi_to_final_dataframe = as.data.frame(rbind(ndvi_sort_2018,ndvi_sort_2019,ndvi_sort_2020,ndvi_sort_2021,ndvi_sort_2022)) %>% 
+  select(-lat,-long)
 #plot
 # plot(ndvi_2018_projected)
-
-
-
-output_mo = paste0(path_cropped,"Monthly_Averages/",nm,"_monthly_avg.tiff")
-writeRaster(crop_monthly,output_mo,format = 'GTiff',overwrite = TRUE)
-extract(ndvi_2018,o3_500m_projected)
-
-##################################################  Exposure Assignment
+################################################## Exposure Assignment
 for(i in 1:nrow(AE)) {
-  AE$tmax[i] = extract(summer_max_temps[[i]],AE[i,])
-  AE$rhmax[i] = extract(summer_max_rh[[i]],AE[i,])
-  AE$pmax[i] = extract(summer_max_precip[[i]],AE[i,])
+  AE$tmax[i] = raster::extract(summer_max_temps[[i]],AE[i,])
+  AE$rhmax[i] = raster::extract(summer_max_rh[[i]],AE[i,])
+  AE$pmax[i] = raster::extract(summer_max_precip[[i]],AE[i,])
 }
 for(i in 1:nrow(BR)) {
-  BR$tmax[i] = extract(summer_max_temps[[i]],BR[i,])
-  BR$rhmax[i] = extract(summer_max_rh[[i]],BR[i,])
-  BR$pmax[i] = extract(summer_max_precip[[i]],BR[i,])
+  BR$tmax[i] = raster::extract(summer_max_temps[[i]],BR[i,])
+  BR$rhmax[i] = raster::extract(summer_max_rh[[i]],BR[i,])
+  BR$pmax[i] = raster::extract(summer_max_precip[[i]],BR[i,])
 }
 for(i in 1:nrow(DC)) {
-  DC$tmax[i] = extract(summer_max_temps[[i]],DC[i,])
-  DC$rhmax[i] = extract(summer_max_rh[[i]],DC[i,])
-  DC$pmax[i] = extract(summer_max_precip[[i]],DC[i,])
+  DC$tmax[i] = raster::extract(summer_max_temps[[i]],DC[i,])
+  DC$rhmax[i] = raster::extract(summer_max_rh[[i]],DC[i,])
+  DC$pmax[i] = raster::extract(summer_max_precip[[i]],DC[i,])
 }
 for(i in 1:nrow(HR)) {
-  HR$tmax[i] = extract(summer_max_temps[[i]],HR[i,])
-  HR$rhmax[i] = extract(summer_max_rh[[i]],HR[i,])
-  HR$pmax[i] = extract(summer_max_precip[[i]],HR[i,])
+  HR$tmax[i] = raster::extract(summer_max_temps[[i]],HR[i,])
+  HR$rhmax[i] = raster::extract(summer_max_rh[[i]],HR[i,])
+  HR$pmax[i] = raster::extract(summer_max_precip[[i]],HR[i,])
 }
 for(i in 1:nrow(LA)) {
-  LA$tmax[i] = extract(summer_max_temps[[i]],LA[i,])
-  LA$rhmax[i] = extract(summer_max_rh[[i]],LA[i,])
-  LA$pmax[i] = extract(summer_max_precip[[i]],LA[i,])
+  LA$tmax[i] = raster::extract(summer_max_temps[[i]],LA[i,])
+  LA$rhmax[i] = raster::extract(summer_max_rh[[i]],LA[i,])
+  LA$pmax[i] = raster::extract(summer_max_precip[[i]],LA[i,])
 }
 for(i in 1:nrow(NREL)) {
-  NREL$tmax[i] = extract(summer_max_temps[[i]],NREL[i,])
-  NREL$rhmax[i] = extract(summer_max_rh[[i]],NREL[i,])
-  NREL$pmax[i] = extract(summer_max_precip[[i]],NREL[i,])
+  NREL$tmax[i] = raster::extract(summer_max_temps[[i]],NREL[i,])
+  NREL$rhmax[i] = raster::extract(summer_max_rh[[i]],NREL[i,])
+  NREL$pmax[i] = raster::extract(summer_max_precip[[i]],NREL[i,])
 }
 for(i in 1:nrow(RF)) {
-  RF$tmax[i] = extract(summer_max_temps[[i]],RF[i,])
-  RF$rhmax[i] = extract(summer_max_rh[[i]],RF[i,])
-  RF$pmax[i] = extract(summer_max_precip[[i]],RF[i,])
+  RF$tmax[i] = raster::extract(summer_max_temps[[i]],RF[i,])
+  RF$rhmax[i] = raster::extract(summer_max_rh[[i]],RF[i,])
+  RF$pmax[i] = raster::extract(summer_max_precip[[i]],RF[i,])
 }
 for(i in 1:nrow(WY)) {
-  WY$tmax[i] = extract(summer_max_temps[[i]],WY[i,])
-  WY$rhmax[i] = extract(summer_max_rh[[i]],WY[i,])
-  WY$pmax[i] = extract(summer_max_precip[[i]],WY[i,])
+  WY$tmax[i] = raster::extract(summer_max_temps[[i]],WY[i,])
+  WY$rhmax[i] = raster::extract(summer_max_rh[[i]],WY[i,])
+  WY$pmax[i] = raster::extract(summer_max_precip[[i]],WY[i,])
 }
-
-rbind(AE,BR,DC,HR,LA,NREL,RF,WY)
 ggs = as.data.frame(rbind(AE,BR,DC,HR,LA,NREL,RF,WY))
-ggs %>% 
+merge(ndvi_to_final_dataframe, ggs, by=c("site_name", "date")) %>%
   group_by(site_name) %>% 
   slice_head(n=1)
 
-# Monthly mode of wind direction -> omiting this but not deleting because I may come back to it
+################################################## Dummy Variables:
 
-# Still Need: 
-# yearly NDVI - Average NDVI 500m buffer - need buffer data is ready
-# Temporal Variables: -> Can't do dummy variables until pivoted? (easiest method off top of head)
 # monthly dummy variable -
 # make a 1 for each month of interest and a 0 for other months
+rough_variables = merge(ndvi_to_final_dataframe, ggs, by=c("site_name", "date"))
+rough_variables$apr_dummy = ifelse(str_detect(rough_variables$date, "Apr."),1,0)
+rough_variables$may_dummy = ifelse(str_detect(rough_variables$date, "May."),1,0)
+rough_variables$jun_dummy = ifelse(str_detect(rough_variables$date, "Jun."),1,0)
+rough_variables$jul_dummy = ifelse(str_detect(rough_variables$date, "Jul."),1,0)
+rough_variables$aug_dummy = ifelse(str_detect(rough_variables$date, "Aug."),1,0)
+rough_variables$sep_dummy = ifelse(str_detect(rough_variables$date, "Sep."),1,0)
+rough_variables$oct_dummy = ifelse(str_detect(rough_variables$date, "Oct."),1,0)
 # yearly dummy variable -
 # make a 1 for each year of interest and a 0 for other years
-# Monthly mode of wind direction -> omitting this but not deleting because I may come back to it
-# RF Model, "Leave one out" cross validation
+rough_variables$yr_2018_dummy = ifelse(str_detect(rough_variables$date, ".2018"),1,0)
+rough_variables$yr_2019_dummy = ifelse(str_detect(rough_variables$date, ".2019"),1,0)
+rough_variables$yr_2020_dummy = ifelse(str_detect(rough_variables$date, ".2020"),1,0)
+rough_variables$yr_2021_dummy = ifelse(str_detect(rough_variables$date, ".2021"),1,0)
+rough_variables$yr_2022_dummy = ifelse(str_detect(rough_variables$date, ".2022"),1,0)
+rough_variables=rough_variables %>% 
+  dplyr::select(site_name,date,lat,long,mda8,everything())
+write.csv(rough_variables,"final_data/ozone_data.csv", overwrite=TRUE)
+##################################################  RF Model, "Leave one out" cross validation
+# STAT 5610 RF Notes
+################################################################################################
+## Random forests for regression: simple example
+## But, also kindof stupid because random forests are meant for high-dimensional feature space
+################################################################################################
+# library(MASS)
+# library(rpart)
+# library(ranger)
+# library(pROC)
+# library(Metrics)
+# library(RColorBrewer)
+# 
+# ozone_data=read.csv("final_data/ozone_data.csv")%>% 
+#   dplyr::select(site_name,date,lat,long,mda8,everything())
+# 
+# ozone_data$site_name = as.factor(ozone_data$site_name)
+# ozone_data$date = as.factor(ozone_data$date)  
+# 
+# ozone_data_no.mda8 = ozone_data %>% 
+#   dplyr::select(-c("mda8"))
+# 
+# ozone_data_mda8_first = ozone_data %>% 
+#   dplyr::select(mda8,everything())
+# 
+# 
+# line = glm(mda8~., data=ozone_data)
+# 
+# 
+# n <- 24
+# qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+# col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+# col=sample(col_vector, n)
+# 
+# 
+# for (i in 1:ncol(ozone_data_no.mda8)){
+#   plot(x=ozone_data_no.mda8[,i],
+#        y=ozone_data_mda8_first$mda8,
+#        main = paste0('Figure ',i,': MDA8 vs. ',colnames(ozone_data_no.mda8)[i]),
+#        xlab = paste0(colnames(ozone_data_no.mda8)[i]),
+#        ylab = "MDA8 Value",
+#        pch = 19)
+#   abline(ozone_data_mda8_first,lm(reformulate(paste0(names(ozone_data_no.mda8[i])),"mda8")),
+#          col = col[i],
+#          lwd = 2)
+# }
+# 
+# ### (b) Splitting the data
+# sample_size = floor(0.50 * nrow(ozone_data_mda8_first))
+# set.seed(09111997)
+# split_dat = sample(seq_len(nrow(ozone_data_mda8_first)), size = sample_size, replace=FALSE)
+# 
+# ozone_train = ozone_data_mda8_first[split_dat, ]
+# ozone_test = ozone_data_mda8_first[-split_dat, ]
+# 
+# lm.final = glm(mda8~., data = ozone_train)
+# pred.vals = predict(lm.final, ozone_test)
+# summary(lm.final)
+# 
+# ### (c) Fitting a regression tree
+# fit.tree = rpart(medv~.,data=boston_train)
+# #summary(fit.tree)
+# par(xpd = NA)
+# plot(fit.tree)
+# text(fit.tree)
+# pred.tree = predict(fit.tree,newdata=boston_test)
+# 
+# ### (d) Fitting a bagged tree
+# set.seed(09111997)
+# pred.boot = ranger(medv~.,data=boston_train,mtry=dim(boston_train)[2]-1,num.trees=500)
+# pred.bag = predict(pred.boot,data=boston_test)$predictions
+# imp_feats = ranger(medv~.,data=boston_train,probability=TRUE,importance="impurity_corrected", mtry=dim(boston_train)[2]-1,num.trees=500)
+# cbind(sort(importance(imp_feats)))
+# 
+# ### (e) Random Forest
+# set.seed(0911997)
+# 
+# fit.rf = ranger(medv~.,data=boston_train, num.trees = 500)
+# pred.rf = predict(fit.rf,data=boston_test)
+# pred.rf = pred.rf$predictions
+# 
+# imp_feats2 = ranger(medv~.,data=boston_train,probability=TRUE,importance="impurity_corrected", num.trees = 500)
+# cbind(sort(importance(imp_feats2)))
+
+##########################################################################################################################################
+
+############## FROM RMD ->>>>>>> COPY THIS BACK IN THE RMD AFTER UNCOMMENTING
+
+##########################################################################################################################################
+
+# ```

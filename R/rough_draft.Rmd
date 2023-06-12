@@ -11,10 +11,19 @@ This is a rough draft of the code and their results.
 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, fig.width=3.25, fig.height=5.5)
 ```
 
-# Libraries
+# Data Creation
+
+\begin{center}
+Note: Monitor data was processed and exported from another document.
+\end{center}
+
+This first section is dedicated to the loading, processing, and creation of all necessary variables:
+ - Variables Added: Monitor distance to nearest road, total distance of roads within a 500m radius of monitor, average NDVI within a 500m radius of monitor, elevation at the monitor location, average monthly precipitation, average monthly maximum relative humidity, and average monthly temperature. 
+
+## Libraries
 
 ```{r}
 # This is for downloading and processing the .nc files from GridMET: https://www.climatologylab.org/gridmet.html
@@ -128,6 +137,12 @@ LA=summer_o3[which(summer_o3$site_name=="La Casa"),]
 NREL=summer_o3[which(summer_o3$site_name=="National Renewable Energy Labs - Nrel"),]
 RF=summer_o3[which(summer_o3$site_name=="Rocky Flats-N"),]
 WY=summer_o3[which(summer_o3$site_name=="Welby"),]
+
+ndvi_sort_2018=summer_o3[grep(".2018",summer_o3$date),c("site_name","date")]
+ndvi_sort_2019=summer_o3[grep(".2019",summer_o3$date),c("site_name","date")]
+ndvi_sort_2020=summer_o3[grep(".2020",summer_o3$date),c("site_name","date")]
+ndvi_sort_2021=summer_o3[grep(".2021",summer_o3$date),c("site_name","date")]
+ndvi_sort_2022=summer_o3[grep(".2022",summer_o3$date),c("site_name","date")]
 ```
 ## Average Monthly Precipitation
 
@@ -181,7 +196,7 @@ summer_max_temps =summer_max_temps[[c(grep("Apr", names(summer_max_temps)),
             grep("Oct", names(summer_max_temps)))]]
 ```
 
-##  Average Monthly Relative Humidity
+## Average Monthly Relative Humidity
 
 ```{r}
 max_rh_to_add = stack(paste0(new_path,max_rh_files)) # create stack of raster bricks (each "stack" is a year, each "brick" is a month)
@@ -205,7 +220,7 @@ summer_max_rh =summer_max_rh[[c(grep("Apr", names(summer_max_rh)),
                                         grep("Oct", names(summer_max_rh)))]]
 ```
 
-##  Exposure Assignment
+## Exposure Assignment
 ```{r}
 for(i in 1:nrow(AE)) {
   AE$tmax[i] = raster::extract(summer_max_temps[[i]],AE[i,])
@@ -255,17 +270,187 @@ ggs %>%
   slice_head(n=1)
 ```
 
+## Average NDVI Within 500m Buffer
+
+```{r}
+ndvi_folder = "NDVIs"
+ndvi_path = list.dirs(paste0("../final_data/",ndvi_folder))[-1]
+ndvi_files = paste0(ndvi_path,"/den_CO_NDVI_",2018:2022,".tif")
+ndvi_2018_projected = raster(paste0(ndvi_path[1],"/co_ndvi_",2018,"projected.tif"))
+ndvi_2019_projected = raster(paste0(ndvi_path[2],"/co_ndvi_",2019,"projected.tif"))
+ndvi_2020_projected = raster(paste0(ndvi_path[3],"/co_ndvi_",2020,"projected.tif"))
+ndvi_2021_projected = raster(paste0(ndvi_path[4],"/co_ndvi_",2021,"projected.tif"))
+ndvi_2022_projected = raster(paste0(ndvi_path[5],"/co_ndvi_",2022,"projected.tif"))
+
+# Replacing values less than 0 - need new value
+values(ndvi_2018_projected)=ifelse(values(ndvi_2018_projected)<0,0,values(ndvi_2018_projected))
+values(ndvi_2019_projected)=ifelse(values(ndvi_2019_projected)<0,0,values(ndvi_2019_projected))
+values(ndvi_2020_projected)=ifelse(values(ndvi_2020_projected)<0,0,values(ndvi_2020_projected))
+values(ndvi_2021_projected)=ifelse(values(ndvi_2021_projected)<0,0,values(ndvi_2021_projected))
+values(ndvi_2022_projected)=ifelse(values(ndvi_2022_projected)<0,0,values(ndvi_2022_projected))
+
+ndvi_sort_2018$ndvi = raster::extract(ndvi_2018_projected,ndvi_sort_2018)
+ndvi_sort_2019$ndvi = raster::extract(ndvi_2019_projected,ndvi_sort_2019)
+ndvi_sort_2020$ndvi = raster::extract(ndvi_2020_projected,ndvi_sort_2020)
+ndvi_sort_2021$ndvi = raster::extract(ndvi_2021_projected,ndvi_sort_2021)
+ndvi_sort_2022$ndvi = raster::extract(ndvi_2022_projected,ndvi_sort_2022)
+ndvi_to_final_dataframe = as.data.frame(rbind(ndvi_sort_2018,ndvi_sort_2019,ndvi_sort_2020,ndvi_sort_2021,ndvi_sort_2022)) %>% 
+  select(-lat,-long)
+#plot
+# plot(ndvi_2018_projected)
+```
+
+## Final Dataframe before Dummy Variable Add-On
+
+```{r}
+merge(ndvi_to_final_dataframe, ggs, by=c("site_name", "date")) %>%
+  group_by(site_name) %>% 
+  slice_head(n=1)
+```
+
+## Dummy Variables:
+
+```{r}
+# monthly dummy variable -
+# make a 1 for each month of interest and a 0 for other months
+rough_variables = merge(ndvi_to_final_dataframe, ggs, by=c("site_name", "date"))
+rough_variables$apr_dummy = ifelse(str_detect(rough_variables$date, "Apr."),1,0)
+rough_variables$may_dummy = ifelse(str_detect(rough_variables$date, "May."),1,0)
+rough_variables$jun_dummy = ifelse(str_detect(rough_variables$date, "Jun."),1,0)
+rough_variables$jul_dummy = ifelse(str_detect(rough_variables$date, "Jul."),1,0)
+rough_variables$aug_dummy = ifelse(str_detect(rough_variables$date, "Aug."),1,0)
+rough_variables$sep_dummy = ifelse(str_detect(rough_variables$date, "Sep."),1,0)
+rough_variables$oct_dummy = ifelse(str_detect(rough_variables$date, "Oct."),1,0)
+# yearly dummy variable -
+# make a 1 for each year of interest and a 0 for other years
+rough_variables$yr_2018_dummy = ifelse(str_detect(rough_variables$date, ".2018"),1,0)
+rough_variables$yr_2019_dummy = ifelse(str_detect(rough_variables$date, ".2019"),1,0)
+rough_variables$yr_2020_dummy = ifelse(str_detect(rough_variables$date, ".2020"),1,0)
+rough_variables$yr_2021_dummy = ifelse(str_detect(rough_variables$date, ".2021"),1,0)
+rough_variables$yr_2022_dummy = ifelse(str_detect(rough_variables$date, ".2022"),1,0)
+```
+
+# Data Inspection
+
+Various plots and statistic metrics will go here. For now here's a glimpse of the values generated.
+
+### Date, NDVI, Lat, Long, Elevation, Distance to nearest road:
+
+```{r}
+rough_variables[,1:8] %>%
+  group_by(site_name) %>% 
+  slice_head(n=1)
+```
+
+### Monthly Average Ozone Value at Monitor Location , Monthly Average Maximum Temperature, Relative Humidity,and Precipitation
+
+```{r}
+rough_variables[,c(1,9:12)] %>%
+  group_by(site_name) %>% 
+  slice_head(n=1)
+```
+
+### Dummy Variables - Repeated for each monitor
+
+```{r}
+rough_variables[,c(2,17:22)] %>%
+  group_by(date) %>% 
+  slice_head(n=1)
+```
+
+
+### Graphs and Statistics
+
+#### Monitor Locations
+```{r}
+rough_variables %>% 
+  group_by(site_name) %>% 
+  slice_head(n=1) %>% 
+  select(site_name) %>% 
+  kableExtra::kable()
+```
+
+#### Dates
+##### Months
+```{r}
+rough_variables %>%
+  separate(date, c("Months","Years")) %>% 
+  dplyr::select(Months) %>% 
+  unique() %>% 
+  kableExtra::kable()
+```
+
+##### Years
+```{r}
+rough_variables %>%
+  separate(date, c("Months","Years")) %>% 
+  dplyr::select(Years) %>% 
+  unique() %>% 
+  kableExtra::kable()
+```
+
+#### Variable Distribution
+
+##### NDVI
+
+```{r}
+par(mfrow=c(2,1))
+hist(rough_variables$ndvi,xlab=NULL, main="NDVI")
+boxplot(rough_variables$ndvi,xlab="Distribution", main=NULL, horizontal =T)
+```
+##### Elevation
+
+```{r}
+par(mfrow=c(2,1))
+hist(rough_variables$elev,xlab=NULL, main="Elevation")
+boxplot(rough_variables$elev,xlab="Distribution", main=NULL, horizontal =T)
+```
+##### Distance to Roads
+
+```{r}
+par(mfrow=c(2,1))
+hist(rough_variables$dist2road,xlab=NULL, main="Distance to Nearest Road")
+boxplot(rough_variables$dist2road,xlab="Distribution", main=NULL, horizontal =T)
+```
+
+##### Road Length
+
+```{r}
+par(mfrow=c(2,1))
+hist(rough_variables$road_length,xlab=NULL, main="Length of Roads Within 500m Radius of Monitor")
+boxplot(rough_variables$road_length,xlab="Distribution", main=NULL, horizontal =T)
+```
+
+##### MDA8
+```{r}
+par(mfrow=c(2,1))
+hist(rough_variables$mda8,xlab=NULL, main="Moving Day Average - 8 Days")
+boxplot(rough_variables$mda8,xlab="Distribution", main=NULL, horizontal =T)
+```
+
+##### Maximum Temperature
+
+```{r}
+par(mfrow=c(2,1))
+hist(rough_variables$tmax,xlab=NULL, main="Average Monthly Max Temperature")
+boxplot(rough_variables$tmax,xlab="Distribution", main=NULL, horizontal =T)
+```
+
+##### Maximum Relative Humidity
+
+```{r}
+par(mfrow=c(2,1))
+hist(rough_variables$rhmax,xlab=NULL, main="Average Monthly Max Relative Humidity")
+boxplot(rough_variables$rhmax,xlab="Distribution", main=NULL, horizontal =T)
+```
+
+##### Maximum Precipitation 
+
+```{r}
+par(mfrow=c(2,1))
+hist(rough_variables$pmax,xlab=NULL, main="Average Monthly Max Precipitation")
+boxplot(rough_variables$pmax,xlab="Distribution", main=NULL, horizontal =T)
+```
 
 # Still Need: 
 
-- yearly NDVI: Average NDVI 500m buffer - need buffer data is ready
-
-- Temporal Variables 
-
-- monthly dummy variable
-
-- yearly dummy variable
-
-- Monthly mode of wind direction -> omitting this but not deleting because I may come back to it
-
-- RF Model, "Leave one out" cross validation

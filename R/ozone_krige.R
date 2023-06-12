@@ -21,7 +21,7 @@ getwd()
 
 ## read in ozone data - data cleaning for ozone krige
 # mda8 = weekly average of max daily 8 hour ozone levels 
-o3 = read_csv("../final_data/o3_mthly_wide.csv") # the "../" bit of code is only so the .R file will run for the .Rmd file
+o3 = read_csv("final_data/o3_mthly_wide.csv") # the "../" bit of code is only so the .R file will run for the .Rmd file
 # head(o3)
 
 # turn o3 into a dataframe

@@ -1,0 +1,255 @@
+---
+title: "Ozone_Random_Forest"
+author: "Ryan Erickson"
+date: "2023-06-05"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, warning = FALSE)
+```
+
+# Libraries
+
+```{r, warning=FALSE, message = FALSE}
+library(dplyr)
+library(tidyr)
+library(MASS)
+library(rpart)
+library(ranger)
+library(pROC)
+library(Metrics)
+library(RColorBrewer)
+```
+
+# Data
+```{r}
+ozone_data=read.csv("../final_data/ozone_data.csv")%>% 
+  dplyr::select(site_name,date,lat,long,mda8,everything())
+
+ozone_data$site_name = as.factor(ozone_data$site_name)
+ozone_data$date = as.factor(ozone_data$date)  
+
+ozone_data_no.mda8_names = ozone_data %>%
+  separate(date, c("Months","Years"),remove =F) %>% 
+  mutate(date=as.character.POSIXt(date),
+         Months=match(Months,month.abb)) %>% 
+  group_by(Months) %>% 
+  arrange(Years, Months)  %>% 
+  ungroup() %>% 
+  dplyr::select(-c("mda8","site_name","date","Months","Years","X")) %>% 
+  as.data.frame()
+
+ozone_data_mda8_first.no_name = ozone_data %>%
+  separate(date, c("Months","Years"),remove =F) %>% 
+  mutate(date=as.character.POSIXt(date),
+         Months=match(Months,month.abb)) %>% 
+  group_by(Months) %>% 
+  arrange(Years, Months)  %>% 
+  ungroup() %>% 
+  dplyr::select(mda8,everything()) %>% 
+  dplyr::select(-c("site_name","date","Months","Years","X")) %>% 
+  as.data.frame()
+
+ozone_data %>%
+  separate(date, c("Months","Years"),remove =F) %>% 
+  mutate(date=as.character.POSIXt(date),
+         Months=match(Months,month.abb)) %>% 
+  group_by(Months) %>% 
+  arrange(Years, Months)  %>% 
+  ungroup() %>% 
+  dplyr::select(mda8,everything()) %>% 
+  dplyr::select(-c("Months","Years","X")) %>%
+  write.csv("../final_data/ozone_data_sorted.csv")
+
+head(ozone_data_no.mda8_names)
+head(ozone_data_mda8_first.no_name)
+```
+
+### Summary of LM models with Dummy Variables Included
+
+```{r}
+line1 = glm(mda8~., data=ozone_data_mda8_first.no_name)
+summary(line1)
+```
+
+### Summary of LM models with no Dummy Variables
+
+```{r}
+line_nd=ozone_data_mda8_first.no_name[,c(-2,-3,-11:-22)]
+line = glm(mda8~., data=line_nd)
+summary(line)
+```
+
+```{r, fig.height=4.2}
+n = 21
+qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+col=sample(col_vector, n)
+
+for (i in 1:ncol(ozone_data_no.mda8_names)) { 
+ plot(x=ozone_data_no.mda8_names[,i],
+       y=ozone_data_mda8_first.no_name$mda8,
+       main = paste0('Figure ',i,': MDA8 vs. ',colnames(ozone_data_no.mda8_names)[i]),
+       xlab = paste0(colnames(ozone_data_no.mda8_names)[i]),
+       ylab = "MDA8 Value",
+       pch = 19)
+  abline(lm(reformulate(paste0(names(ozone_data_no.mda8_names[i])),"mda8"),ozone_data_mda8_first.no_name),
+         col = col[i],
+         lwd = 2)
+}
+```
+
+```{r}
+test=as.data.frame(ozone_data_mda8_first.no_name[,c(-2,-3,-11:-22)])
+test1=as.data.frame(ozone_data_mda8_first.no_name[,c(-1,-2,-3,-11:-22)])
+
+n = 7
+qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+col=sample(col_vector, n)
+
+for (i in 1:ncol(test1)) { 
+ plot(x=test1[,i],
+       y=test$mda8,
+       main = paste0('Figure ',i,': MDA8 vs. ',colnames(test1)[i]),
+       xlab = paste0(colnames(test1)[i]),
+       ylab = "MDA8 Value",
+       pch = 19)
+  abline(lm(reformulate(paste0(names(test1[i])),"mda8"),test),
+         col = col[i],
+         lwd = 2)
+}
+```
+
+### Splitting the Data - Testing Linear Models: 75% train/test split
+
+```{r}
+sample_size = floor(0.75 * nrow(ozone_data_mda8_first.no_name))
+set.seed(09111997)
+split_dat = sample(seq_len(nrow(ozone_data_mda8_first.no_name)), size = sample_size, replace=FALSE)
+
+ozone_train = ozone_data_mda8_first.no_name[split_dat, ]
+ozone_test = ozone_data_mda8_first.no_name[-split_dat, ]
+
+lm.final = glm(mda8~., data = ozone_train)
+###predicting on training date with test data
+pred.vals = predict(object=lm.final,new_data=ozone_test,type = "response")
+summary(lm.final)
+```
+
+Linear Model RMSE = `r round(rmse(ozone_train$mda8, pred.vals), digits=2)`
+
+### Splitting the Data Without Dummy Variables - Testing Linear Models: 75% train/test split
+
+```{r}
+sample_size = floor(0.75 * nrow(test))
+set.seed(09111997)
+split_dat = sample(seq_len(nrow(test)), size = sample_size, replace=FALSE)
+
+ozone_train = test[split_dat, ]
+ozone_test = test[-split_dat, ]
+
+lm.final = glm(mda8~., data = ozone_train)
+pred.vals = predict(lm.final, new_data=ozone_test)
+summary(lm.final)
+```
+
+Linear Model RMSE = `r round(rmse(ozone_train$mda8, pred.vals), digits=2)`
+
+### (c) Fitting a regression tree - predict by month
+
+```{r, warning=FALSE, message = FALSE}
+fit.tree = rpart(mda8~.,data=ozone_train)
+#summary(fit.tree)
+par(xpd = NA)
+plot(fit.tree)
+text(fit.tree)
+
+pred.tree = predict(fit.tree,newdata=ozone_test)
+```
+
+Regression Tree RMSE = `r round(rmse(ozone_test$mda8, as.numeric(pred.tree)), digits=2)`
+
+
+### (d) Fitting a bagged tree
+
+```{r}
+set.seed(09111997)
+pred.boot = ranger(mda8~.,data=ozone_train,mtry=dim(ozone_train)[2]-1,num.trees=500)
+pred.bag = predict(pred.boot,data=ozone_test)$predictions
+
+imp_feats = ranger(mda8~.,data=ozone_train,probability=TRUE,importance="impurity_corrected", mtry=dim(ozone_train)[2]-1,num.trees=500)
+
+cbind(sort(importance(imp_feats)))
+```
+
+Bagging RMSE = `r round(rmse(ozone_test$mda8, pred.bag), digits=2)`
+
+
+### (e) Random Forest
+
+```{r}
+set.seed(0911997)
+
+fit.rf = ranger(mda8~.,data=ozone_train, num.trees = 500)
+pred.rf = predict(fit.rf,data=ozone_test)
+pred.rf = pred.rf$predictions
+
+imp_feats2 = ranger(mda8~.,data=ozone_train,probability=TRUE,importance="impurity_corrected", num.trees = 500)
+cbind(sort(importance(imp_feats2)))
+```
+
+RMSE = `r round(rmse(ozone_test$mda8,pred.rf), digits=2)`
+
+### Code Appendix
+
+```{r, echo = TRUE, eval = FALSE}
+for (i in 1:ncol(ozone_data_no.mda8_names)){
+  plot(x=ozone_data_no.mda8_names[,i],
+       y=ozone_data_mda8_first.no_name$mda8,
+       main = paste0('Figure ',i,': MDA8 vs. ',colnames(ozone_data_no.mda8_names)[i]),
+       xlab = paste0(colnames(ozone_data_no.mda8_names)[i]),
+       ylab = "MDA8 Value",
+       pch = 19)
+  abline(lm(reformulate(paste0(names(ozone_data_no.mda8_names[i])),"mda8"),ozone_data_mda8_first.no_name),
+         col = col[i],
+         lwd = 2)
+}
+
+sample_size = floor(0.50 * nrow(ozone_data_mda8_first.no_name))
+set.seed(09111997)
+split_dat = sample(seq_len(nrow(ozone_data_mda8_first.no_name)), size = sample_size, replace=FALSE)
+
+ozone_train = ozone_data_mda8_first.no_name[split_dat, ]
+ozone_test = ozone_data_mda8_first.no_name[-split_dat, ]
+
+lm.final = glm(mda8~., data = ozone_train)
+pred.vals = predict(lm.final, ozone_test)
+summary(lm.final)
+
+fit.tree = rpart(mda8~.,data=ozone_train)
+#summary(fit.tree)
+par(xpd = NA)
+plot(fit.tree)
+text(fit.tree)
+
+pred.tree = predict(fit.tree,newdata=ozone_test)
+
+set.seed(09111997)
+pred.boot = ranger(mda8~.,data=ozone_train,mtry=dim(ozone_train)[2]-1,num.trees=500)
+pred.bag = predict(pred.boot,data=ozone_test)$predictions
+
+imp_feats = ranger(mda8~.,data=ozone_train,probability=TRUE,importance="impurity_corrected", mtry=dim(ozone_train)[2]-1,num.trees=500)
+
+cbind(sort(importance(imp_feats)))
+
+set.seed(0911997)
+
+fit.rf = ranger(mda8~.,data=ozone_train, num.trees = 500)
+pred.rf = predict(fit.rf,data=ozone_test)
+pred.rf = pred.rf$predictions
+
+imp_feats2 = ranger(mda8~.,data=ozone_train,probability=TRUE,importance="impurity_corrected", num.trees = 500)
+cbind(sort(importance(imp_feats2)))
+```
