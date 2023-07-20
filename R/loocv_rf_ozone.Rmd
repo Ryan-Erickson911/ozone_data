@@ -34,7 +34,7 @@ rf_model_dates.mda8$Years=as.factor(rf_model_dates.mda8$Years)
 rf_model_dates.mda8$date = as.factor(rf_model_dates.mda8$date)
 rf_model_dates.mda8$site_name = as.factor(rf_model_dates.mda8$site_name)
 
-# No dates
+# No dates or Site name
 rf_model_nd.mda8=as.data.frame(ozone_data[,c(-2:-7,-14:-26)])
 ```
 
@@ -67,10 +67,14 @@ model_dates
 ### Fine Tuning - not working, I am in confusion
 
 ```{r}
+set.seed(09111997)
+kfolds <- groupKFold(rf_model_dates.mda8$site_name, k = 7) 
+
 def_control <- trainControl(
-  method = 'repeatedcv',
-  number = 7,                     # should be number of folds/resampling iterations (number of K folds)
-  repeats = 10,                     # For repeated k-fold cross-validation only: the number of complete sets of folds to compute
+  method = 'LOOCV',
+#  number = 7,                     # should be number of folds/resampling iterations (number of K folds)
+  index = kfolds,
+  p = 1,
   savePredictions = 'final',      # saves predictions for optimal tuning parameter
 #  seed = as.list(rep(1,71)),      # setting seed for repetition of results, I can't get this to work, stackover flow says it's needed?
 )
