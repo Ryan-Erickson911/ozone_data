@@ -80,8 +80,10 @@ o3_projected = spTransform(o3, CRS(prg))
 # read in CO counties shp
 # source: CDPHE https://data-cdphe.opendata.arcgis.com/datasets/CDPHE::colorado-county-boundaries/about
 # co_co = st_read("data/co_counties/Colorado_County_Boundaries.shp") # old shp file
+# remotes::install_github("ropensci/USAboundaries")
+# remotes::install_github("ropensci/USAboundariesData")
 co_co = USAboundaries::us_counties(states = "Colorado") %>% 
-  st_transform(crs="EPSG:32613")#2020 boundaries and implemented package
+  st_transform(crs="EPSG:32613") # 2020 boundaries and implemented package
 
 # Select only Denver metro counties and geometry
 den_co = co_co[which(co_co$name %in% c("Adams","Arapahoe","Boulder","Broomfield","Denver","Douglas","Jefferson")),] %>%

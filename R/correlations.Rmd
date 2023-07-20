@@ -1,0 +1,165 @@
+---
+title: "Linear Models"
+author: "Ryan Erickson"
+date: "2023-05-16"
+output: pdf_document
+---
+## Loading Data
+
+```{r, message=FALSE, error=FALSE, results = FALSE}
+source("ozone_krige.R")
+o3_long = read_csv("../python/AQ/code/AQ_cleaning/o3_mthly_avg.csv")
+o3_long=o3_long[,-1]
+o3_long=o3_long[!(o3_long$site_name=="Aspen Park" | o3_long$site_name=="Evergreen" | o3_long$site_name=="Welch"),]
+ls = format(as.Date(o3_long$date), "%b %Y")
+ls=str_split_fixed(ls, " ", n=2)
+o3_long$month=ls[,1]
+o3_long$year=as.integer(ls[,2])
+
+o3_projected$site_name=toupper(o3_projected$site_name)
+o3_long$site_name = toupper(o3_long$site_name)
+```
+
+## Adding Data
+
+```{r, message=FALSE, error=FALSE, results = FALSE}
+add_road_buffer = read_csv("../data/roads_in_500m_buffer.csv")[,c(2,4)] %>% 
+  filter(site_name != "Aspen Park" & site_name != "Evergreen" & site_name !="Welch")
+names(add_road_buffer) = c("site_name","road_length")
+add_road_buffer$site_name=toupper(add_road_buffer$site_name)
+add_road_buffer$road_length=ifelse(is.na(add_road_buffer$road_length),0,add_road_buffer$road_length)
+
+path_to_data_folder="../data/krige_data/"
+added_tiffs_list = list.files(path_to_data_folder)
+path_to_roads="../data/krige_data/co_roads_2019/co_roads_2019.shp"
+# C = County
+# I = Interstate
+# M = Common Name
+# O = Other
+# S = State recognized
+# U = U.S.
+
+add_elev = raster(paste0(path_to_data_folder, added_tiffs_list[grep("elevation",added_tiffs_list)]))
+add_elev_projected = raster::projectRaster(add_elev, crs=prg)
+add_rh = raster(paste0(path_to_data_folder, added_tiffs_list[grep("rmax",added_tiffs_list)]))
+add_rh_projected = raster::projectRaster(add_rh, crs=prg)
+
+roads_shp = st_read(path_to_roads)
+roads = st_transform(roads_shp,crs="EPSG:4326")
+roads_projected = as(roads, "Spatial")
+roads_projected = spTransform(roads_projected,CRS(prg))
+# proj4string(roads_projected)
+# proj4string(o3_projected)
+dist2road = o3_projected$dist2road[1]=round(rgeos::gDistance(roads_projected,o3_projected[1,]),2)
+for(i in 2:nrow(o3_projected)){
+  dist2road=c(dist2road,round(rgeos::gDistance(roads_projected,o3_projected[i,]),2))
+}
+
+#rounded K to F formula: 1.8*(K-273) + 32
+
+# add_temp = raster(paste0(path_to_data_folder,added_tiffs_list[14]))
+# add_temp_projected = raster::projectRaster(add_temp, crs=prg)
+# 
+# o3_projected$temp=round(raster::extract(add_temp_projected,o3_projected),2) # special child
+
+o3_projected$dist2road=dist2road
+o3_projected$elev=round(raster::extract(add_elev_projected,o3_projected),2)
+o3_projected$rh=round(raster::extract(add_rh_projected,o3_projected),2)
+
+elev_join=as.data.frame(o3_projected) %>% 
+  dplyr::select("site_name","elev","dist2road","rh")
+
+o3_lm = inner_join(o3_long, elev_join, by=c("site_name")) %>% 
+  left_join(add_road_buffer, by=c("site_name"))
+
+o3_lm %>% 
+  group_by(site_name) %>% 
+  slice_head()
+```
+
+## Model Creation: Predictions for July 2018
+
+Models Ran:
+ - Ozone with Temperature - WIP
+ - Ozone with distance to nearest A1 road - donezo
+ - Ozone with total length of all A1 roads within 500 m - donezo
+ - Ozone with RH - donezo
+ - Ozone with elevation - donezo
+ - Ozone with elevation and total length of all A1 roads within 500m buffer - donezo
+ - Ozone with temperature and RH - WIP
+ - Ozone with temperature and distance to nearest A1 road - WIP
+ - Ozone with temperature and elevation - WIP
+ - Ozone with temperature and elevation and distance to nearest A1 road - WIP
+
+```{r, message=FALSE, error=FALSE}
+july_2018 = o3_lm %>% 
+  filter(month=="Jul" & year == "2018")
+dist2nearestRD = lm(mda8~dist2road,data=july_2018)
+road_length = lm(mda8~road_length,data=july_2018)
+relative_humidity = lm(mda8~rh,data=july_2018) 
+elevation = lm(mda8~elev,data=july_2018) 
+road_length.elevation = glm(mda8~road_length+elev,data=july_2018)
+all=glm(mda8~elev+dist2road+rh+road_length ,data=july_2018) #missing temp
+```
+
+#### Model Results - VIFs where applicable
+```{r}
+car::vif(road_length.elevation)
+car::vif(all)
+```
+
+```{r}
+summary(dist2nearestRD)
+summary(road_length)
+summary(relative_humidity)
+summary(elevation)
+summary(road_length.elevation)
+summary(all)
+```
+
+
+### Plots
+```{r, message=FALSE, error=FALSE}
+#par(mfrow=c(3,1))
+plot(july_2018$road_length, july_2018$mda8, main="MDA8 vs. Road Length", sub=paste0("y=",round(dist2nearestRD$coefficients[2],7),"x + ",round(dist2nearestRD$coefficients[1],7)), ylab="mda8", xlab="Road Length Slope")
+abline(dist2nearestRD$coefficients[1],dist2nearestRD$coefficients[2], col="red")
+
+plot(july_2018$elev, july_2018$mda8, main="MDA8 vs. Elevation", sub=paste0("y=",round(elevation$coefficients[2],7),"x + ",round(elevation$coefficients[1],7)), ylab="mda8", xlab="Elevation")
+abline(elevation$coefficients[1],elevation$coefficients[2], col="red")
+
+plot(july_2018$rh, july_2018$mda8, main="MDA8 vs. Relative Humidity", sub=paste0("y=",round(relative_humidity$coefficients[2],7),"x + ",round(relative_humidity$coefficients[1],7)), ylab="mda8", xlab="RH")
+abline(relative_humidity$coefficients[1],relative_humidity$coefficients[2], col="red")
+
+plot(july_2018$dist2road, july_2018$mda8, main="MDA8 vs. Moniter Distance to Nearest Road", sub=paste0("y=",round(dist2nearestRD$coefficients[2],7),"x + ",round(dist2nearestRD$coefficients[1],7)), ylab="mda8", xlab="Distance")
+abline(dist2nearestRD$coefficients[1],dist2nearestRD$coefficients[2], col="red")
+
+plot(july_2018$road_length+july_2018$elev, july_2018$mda8, main="MDA8 vs. Road Length + Elevation", ylab="mda8", xlab="Road Length + Elevation",
+     ylim = c(0, 0.06), 
+     xlim = c(0, 5500))
+abline(road_length.elevation$coefficients[1],road_length.elevation$coefficients[2], col="red")
+abline(road_length.elevation$coefficients[1],road_length.elevation$coefficients[3], col="blue")
+text(3000,0.01425, paste0("y = ",round(road_length.elevation$coefficients[2],7),"x + (",round(road_length.elevation$coefficients[1],7),")"), col = "red")
+text(3000,0.01, paste0("y = ",round(road_length.elevation$coefficients[3],7),"x + (",round(road_length.elevation$coefficients[1],7),")"), col = "blue")
+
+#abline(july_2018$mda8,fitted(road_length.elevation), col="purple")
+
+new <- data.frame(x = seq(0,0.06, 0.01)) %>% 
+  mutate(elev="NULL",
+         road_length="NULL")
+
+plot(july_2018$road_length+july_2018$elev+july_2018$dist2road+july_2018$rh, july_2018$mda8, main="MDA8 vs. All 4 Variables", 
+     sub=expression("y="*beta[1]+beta[2]+beta[3]+beta[4]), 
+     ylab="mda8", xlab="Multivariate Line",
+     ylim = c(0, 0.06), 
+     xlim = c(0, 13500))
+abline(road_length$coefficients[1],road_length$coefficients[2], col="red")
+abline(elevation$coefficients[1],elevation$coefficients[2], col="orange")
+abline(dist2nearestRD$coefficients[1],dist2nearestRD$coefficients[2], col="green")
+abline(relative_humidity$coefficients[1],relative_humidity$coefficients[2], col="blue")
+text(7000,0.00575, paste0("y = ",round(road_length$coefficients[2],7),"x + ",round(road_length$coefficients[1],7)), col = "red")
+text(7000,0.01, paste0("y = ",round(elevation$coefficients[2],7),"x + ",round(elevation$coefficients[1],7)), col = "orange")
+text(7000,0.01425, paste0("y = ",round(dist2nearestRD$coefficients[2],7),"x + ",round(dist2nearestRD$coefficients[1],7)), col = "green")
+text(7000,0.0185, paste0("y = ",round(relative_humidity$coefficients[2],7),"x + ",round(relative_humidity$coefficients[1],7)), col = "blue")
+
+```
+

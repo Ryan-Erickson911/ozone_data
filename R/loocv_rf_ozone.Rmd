@@ -1,0 +1,81 @@
+---
+title: "Ozone Prediction via Random forrest: Leave One Out Cross Validation"
+author: "Ryan Erickson"
+date: "2023-07-18"
+output: pdf_document
+---
+
+# Libraries
+
+```{r, warning=FALSE, message = FALSE}
+library(dplyr)
+library(tidyr)
+library(caret)
+```
+
+```{r}
+ozone_data=read.csv("../final_data/ozone_data.csv") %>% 
+  dplyr::select(site_name,date,lat,long,mda8,everything())
+
+ozone_data = ozone_data %>%
+  separate(date, c("Months","Years"),remove =F) %>% 
+  mutate(Months=match(Months,month.abb)) %>% 
+  group_by(Months) %>% 
+  arrange(Years, Months)  %>% 
+  ungroup() %>% 
+  dplyr::select(mda8,everything()) %>% 
+  dplyr::select(-"X") %>% 
+  as.data.frame()
+
+#MD8 Including Time - perhaps this will come in handy later?
+rf_model_dates.mda8=as.data.frame(ozone_data[,c(-6,-7,-14:-26)])
+rf_model_dates.mda8$Months=as.factor(rf_model_dates.mda8$Months)
+rf_model_dates.mda8$Years=as.factor(rf_model_dates.mda8$Years)
+rf_model_dates.mda8$date = as.factor(rf_model_dates.mda8$date)
+rf_model_dates.mda8$site_name = as.factor(rf_model_dates.mda8$site_name)
+
+# No dates
+rf_model_nd.mda8=as.data.frame(ozone_data[,c(-2:-7,-14:-26)])
+```
+
+### Line for Sgnificance
+```{r}
+line1 = glm(mda8~., data=rf_model_nd.mda8)
+summary(line1)
+```
+
+
+### Basic LOOCV
+
+```{r}
+#specify LOOCV
+control <- trainControl(method = "LOOCV")
+
+#fit a rf model and use LOOCV to evaluate performance
+model <- train(mda8 ~ ., data = rf_model_nd.mda8, method = "rf", trControl = control)
+model
+```
+
+### Basic LOOCV - With dates
+```{r}
+#fit a rf model and use LOOCV to evaluate performance
+model_dates <- train(mda8 ~ ., data = rf_model_dates.mda8, method = "rf", trControl = control)
+model_dates
+```
+
+
+### Fine Tuning - not working, I am in confusion
+
+```{r}
+def_control <- trainControl(
+  method = 'repeatedcv',
+  number = 7,                     # should be number of folds/resampling iterations (number of K folds)
+  repeats = 10,                     # For repeated k-fold cross-validation only: the number of complete sets of folds to compute
+  savePredictions = 'final',      # saves predictions for optimal tuning parameter
+#  seed = as.list(rep(1,71)),      # setting seed for repetition of results, I can't get this to work, stackover flow says it's needed?
+)
+
+model_tuned = train(mda8~.,data=rf_model_dates.mda8,method='rf',trControl=def_control)
+model_tuned
+```
+

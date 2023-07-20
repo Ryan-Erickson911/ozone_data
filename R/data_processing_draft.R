@@ -25,7 +25,6 @@ getting_folders = grep("co_roads_2019", co_data_list, value = T)
 road_shp_file = "co_roads_2019.shp"
 path_to_roads = paste0("final_data/",getting_folders,"/")
 # C = County
-
 # I = Interstate
 # M = Common Name
 # O = Other
@@ -56,7 +55,7 @@ o3_projected$elev=round(raster::extract(elevation_projected,o3_projected),2)
 year_o3 = as.data.frame(o3_projected) %>% 
   dplyr::select(c("site_name","elev","dist2road","road_length","lat","long"),everything())
 
-# use to create dataframe of specific months, ex below is summer
+# use to create data frame of specific months, ex below is summer
 summer_o3 = year_o3 %>%
   dplyr::select(contains(c("site_name","lat","long","elev","dist2road","road_length","Apr","May","Jun","Jul","Aug","Sep","Oct"))) %>% 
   pivot_longer(cols = contains(c("Apr","May","Jun","Jul","Aug","Sep","Oct")), names_to = "date", values_to = "mda8")
@@ -80,15 +79,17 @@ new_path = "final_data/Monthly_Averages/"
 monthly_path = list.files(paste0(new_path))
 max_rh_files=grep("rmax_",monthly_path, value = T)
 max_temp_files=grep("tmmx_",monthly_path, value = T)
-max_precip_files=grep("pr_",monthly_path, value = T)
+sum_precip_files=grep("pr_[0-9]+_[A-Za-z]+_sum",monthly_path, value = T)
+
 renameing_convention = c(paste0(month.abb,".",2017),
                          paste0(month.abb,".",2018),
                          paste0(month.abb,".",2019),
                          paste0(month.abb,".",2020),
                          paste0(month.abb,".",2021),
                          paste0(month.abb,".",2022))
-coordinates(summer_o3) = c('long', 'lat')
-proj4string(summer_o3) = CRS(SRS_string = prg)
+
+coordinates(summer_o3)=c('long', 'lat')
+proj4string(summer_o3)=CRS(SRS_string = prg)
 AE=summer_o3[which(summer_o3$site_name=="Aurora East"),]
 BR=summer_o3[which(summer_o3$site_name=="Boulder Reservoir"),]
 DC=summer_o3[which(summer_o3$site_name=="Denver - Camp"),]
@@ -106,25 +107,27 @@ ndvi_sort_2022=summer_o3[grep(".2022",summer_o3$date),c("site_name","date")]
 
 ################################################# Monthly total precip
 
-max_precip_to_add = stack(paste0(new_path,max_precip_files)) # create stack of raster bricks (each "stack" is a year, each "brick" is a month)
-#plots
-# plot(max_precip_to_add$tmmx_2017_monthly_avg_1.1, main="Precipitation for Jan 2017")
-max_precip_projected = raster::projectRaster(max_precip_to_add, crs=prg)
-names(max_precip_projected) = renameing_convention
+sum_precip_to_add = stack(paste0(new_path,sum_precip_files)) # create stack of raster bricks (each "stack" is a year, each "brick" is a month)
+# plots
+# plot(sum_precip_to_add$tmmx_2017_monthly_avg_1.1, main="Precipitation for Jan 2017")
+sum_precip_projected = raster::projectRaster(sum_precip_to_add, crs=prg)
+names(sum_precip_projected) = renameing_convention
 #plots: after running names() (above code)
-# plot(max_precip_projected$Jan.2017, main="Precipitation for Jan 2017")
-summer_max_precip =max_precip_projected[[c(grep("2018", names(max_precip_projected)),
-                                           grep("2019", names(max_precip_projected)),
-                                           grep("2020", names(max_precip_projected)),
-                                           grep("2021", names(max_precip_projected)),
-                                           grep("2022", names(max_precip_projected)))]]
-summer_max_precip =summer_max_precip[[c(grep("Apr", names(summer_max_precip)),
-                                        grep("May", names(summer_max_precip)),
-                                        grep("Jun", names(summer_max_precip)),
-                                        grep("Jul", names(summer_max_precip)),
-                                        grep("Aug", names(summer_max_precip)),
-                                        grep("Sep", names(summer_max_precip)),
-                                        grep("Oct", names(summer_max_precip)))]]
+# plot(sum_precip_projected$Jan.2017, main="Precipitation for Jan 2017")
+
+summer_sum_precip =sum_precip_projected[[c(grep("2018", names(sum_precip_projected)),
+                                           grep("2019", names(sum_precip_projected)),
+                                           grep("2020", names(sum_precip_projected)),
+                                           grep("2021", names(sum_precip_projected)),
+                                           grep("2022", names(sum_precip_projected)))]]
+
+summer_sum_precip =summer_sum_precip[[c(grep("Apr", names(summer_sum_precip)),
+                                        grep("May", names(summer_sum_precip)),
+                                        grep("Jun", names(summer_sum_precip)),
+                                        grep("Jul", names(summer_sum_precip)),
+                                        grep("Aug", names(summer_sum_precip)),
+                                        grep("Sep", names(summer_sum_precip)),
+                                        grep("Oct", names(summer_sum_precip)))]]
 
 ################################################## Monthly max temp -> rounded K to F formula just in case: 1.8*(K-273) + 32
 
@@ -136,12 +139,14 @@ max_temperature_projected = raster::projectRaster(max_temperature_to_add, crs=pr
 names(max_temperature_projected) = renameing_convention
 #plots: after running names() (above code)
 # plot(max_temperature_projected$Jan.2017, main="Temperature for Jan 2017")
-summer_max_temps =max_temperature_projected[[c(grep("2018", names(max_temperature_projected)),
+
+summer_max_temps=max_temperature_projected[[c(grep("2018", names(max_temperature_projected)),
                                                grep("2019", names(max_temperature_projected)),
                                                grep("2020", names(max_temperature_projected)),
                                                grep("2021", names(max_temperature_projected)),
                                                grep("2022", names(max_temperature_projected)))]]
-summer_max_temps =summer_max_temps[[c(grep("Apr", names(summer_max_temps)),
+
+summer_max_temps=summer_max_temps[[c(grep("Apr", names(summer_max_temps)),
                                       grep("May", names(summer_max_temps)),
                                       grep("Jun", names(summer_max_temps)),
                                       grep("Jul", names(summer_max_temps)),
@@ -163,6 +168,7 @@ summer_max_rh =max_rh_projected[[c(grep("2018", names(max_rh_projected)),
                                    grep("2020", names(max_rh_projected)),
                                    grep("2021", names(max_rh_projected)),
                                    grep("2022", names(max_rh_projected)))]]
+
 summer_max_rh =summer_max_rh[[c(grep("Apr", names(summer_max_rh)),
                                 grep("May", names(summer_max_rh)),
                                 grep("Jun", names(summer_max_rh)),
@@ -212,49 +218,49 @@ ndvi_sort_2020$ndvi = raster::extract(ndvi_2020_projected,ndvi_sort_2020)
 ndvi_sort_2021$ndvi = raster::extract(ndvi_2021_projected,ndvi_sort_2021)
 ndvi_sort_2022$ndvi = raster::extract(ndvi_2022_projected,ndvi_sort_2022)
 ndvi_to_final_dataframe = as.data.frame(rbind(ndvi_sort_2018,ndvi_sort_2019,ndvi_sort_2020,ndvi_sort_2021,ndvi_sort_2022)) %>% 
-  select(-lat,-long)
+  dplyr::select(-lat,-long)
 #plot
 # plot(ndvi_2018_projected)
 ################################################## Exposure Assignment
 for(i in 1:nrow(AE)) {
   AE$tmax[i] = raster::extract(summer_max_temps[[i]],AE[i,])
   AE$rhmax[i] = raster::extract(summer_max_rh[[i]],AE[i,])
-  AE$pmax[i] = raster::extract(summer_max_precip[[i]],AE[i,])
+  AE$pmax[i] = raster::extract(summer_sum_precip[[i]],AE[i,])
 }
 for(i in 1:nrow(BR)) {
   BR$tmax[i] = raster::extract(summer_max_temps[[i]],BR[i,])
   BR$rhmax[i] = raster::extract(summer_max_rh[[i]],BR[i,])
-  BR$pmax[i] = raster::extract(summer_max_precip[[i]],BR[i,])
+  BR$pmax[i] = raster::extract(summer_sum_precip[[i]],BR[i,])
 }
 for(i in 1:nrow(DC)) {
   DC$tmax[i] = raster::extract(summer_max_temps[[i]],DC[i,])
   DC$rhmax[i] = raster::extract(summer_max_rh[[i]],DC[i,])
-  DC$pmax[i] = raster::extract(summer_max_precip[[i]],DC[i,])
+  DC$pmax[i] = raster::extract(summer_sum_precip[[i]],DC[i,])
 }
 for(i in 1:nrow(HR)) {
   HR$tmax[i] = raster::extract(summer_max_temps[[i]],HR[i,])
   HR$rhmax[i] = raster::extract(summer_max_rh[[i]],HR[i,])
-  HR$pmax[i] = raster::extract(summer_max_precip[[i]],HR[i,])
+  HR$pmax[i] = raster::extract(summer_sum_precip[[i]],HR[i,])
 }
 for(i in 1:nrow(LA)) {
   LA$tmax[i] = raster::extract(summer_max_temps[[i]],LA[i,])
   LA$rhmax[i] = raster::extract(summer_max_rh[[i]],LA[i,])
-  LA$pmax[i] = raster::extract(summer_max_precip[[i]],LA[i,])
+  LA$pmax[i] = raster::extract(summer_sum_precip[[i]],LA[i,])
 }
 for(i in 1:nrow(NREL)) {
   NREL$tmax[i] = raster::extract(summer_max_temps[[i]],NREL[i,])
   NREL$rhmax[i] = raster::extract(summer_max_rh[[i]],NREL[i,])
-  NREL$pmax[i] = raster::extract(summer_max_precip[[i]],NREL[i,])
+  NREL$pmax[i] = raster::extract(summer_sum_precip[[i]],NREL[i,])
 }
 for(i in 1:nrow(RF)) {
   RF$tmax[i] = raster::extract(summer_max_temps[[i]],RF[i,])
   RF$rhmax[i] = raster::extract(summer_max_rh[[i]],RF[i,])
-  RF$pmax[i] = raster::extract(summer_max_precip[[i]],RF[i,])
+  RF$pmax[i] = raster::extract(summer_sum_precip[[i]],RF[i,])
 }
 for(i in 1:nrow(WY)) {
   WY$tmax[i] = raster::extract(summer_max_temps[[i]],WY[i,])
   WY$rhmax[i] = raster::extract(summer_max_rh[[i]],WY[i,])
-  WY$pmax[i] = raster::extract(summer_max_precip[[i]],WY[i,])
+  WY$pmax[i] = raster::extract(summer_sum_precip[[i]],WY[i,])
 }
 ggs = as.data.frame(rbind(AE,BR,DC,HR,LA,NREL,RF,WY))
 merge(ndvi_to_final_dataframe, ggs, by=c("site_name", "date")) %>%
@@ -282,7 +288,7 @@ rough_variables$yr_2021_dummy = ifelse(str_detect(rough_variables$date, ".2021")
 rough_variables$yr_2022_dummy = ifelse(str_detect(rough_variables$date, ".2022"),1,0)
 rough_variables=rough_variables %>% 
   dplyr::select(site_name,date,lat,long,mda8,everything())
-write.csv(rough_variables,"final_data/ozone_data.csv", overwrite=TRUE)
+write.csv(rough_variables,"final_data/ozone_data.csv")
 ##################################################  RF Model, "Leave one out" cross validation
 # STAT 5610 RF Notes
 ################################################################################################
@@ -366,11 +372,3 @@ write.csv(rough_variables,"final_data/ozone_data.csv", overwrite=TRUE)
 # 
 # imp_feats2 = ranger(medv~.,data=boston_train,probability=TRUE,importance="impurity_corrected", num.trees = 500)
 # cbind(sort(importance(imp_feats2)))
-
-##########################################################################################################################################
-
-############## FROM RMD ->>>>>>> COPY THIS BACK IN THE RMD AFTER UNCOMMENTING
-
-##########################################################################################################################################
-
-# ```

@@ -1,0 +1,136 @@
+---
+title: "Ozone Krige Prediction"
+subtitle: "Variable: Distance to Nearest A1 Road"
+author: "Ryan Erickson"
+date: "2023-05-15"
+output: html_document
+---
+
+# Data Prep and Display
+
+```{r}
+source("ozone_krige.R")
+# get elevation from DEM data. 
+# 1. Ozone with Temperature
+# 2. Ozone with distance to nearest A1 road
+# 3. Ozone with total length of all A1 roads within 500 m
+# 4. Ozone with temperature and RH
+# 5. Ozone with temperature and distance to nearest A1 road
+# 6. Ozone with temperature and elevation
+# 7. Ozone with temperature and elevation and distance to nearest A1 road.
+
+path_to_data_folder="../data/krige_data/co_roads_2019/"
+road_shp_path = "co_roads_2019.shp"
+# C = County
+# I = Interstate
+# M = Common Name
+# O = Other
+# S = State recognized
+# U = U.S.
+roads_shp = st_read(paste0(path_to_data_folder,road_shp_path))
+roads = st_transform(roads_shp,crs=CRS(prg))
+roads_projected = as(roads, "Spatial")
+dist2road = o3_projected$dist2road[1]=round(rgeos::gDistance(roads_projected,o3_projected[1,]),2)
+for(i in 2:nrow(o3_projected)){
+  dist2road=c(dist2road,round(rgeos::gDistance(roads_projected,o3_projected[i,]),2))
+}
+o3$dist2road=dist2road
+
+plot(roads_projected, main= "Primary Roads Network")
+plot(den_projected, col="red", add=TRUE)
+plot(o3_projected, col="green", add=TRUE)
+
+head(cbind(o3_projected$site_name,o3_projected$dist2road))
+# join elevation column back to o3_projected
+# o3_projected = merge(x=o3_projected,y=o3_elevs,by="site_name", duplicateGeoms = TRUE)
+#o3_projected
+year_o3 = as.data.frame(o3_projected)
+year_o3 = year_o3 %>% 
+  dplyr::select(c("site_name","dist2road","long","lat"),everything())
+
+# use to create dataframe of specific months, ex below is summer
+# summer_o3 = year_o3 %>%
+#   dplyr::select(contains(c("site_name","lat","long","elevation","Apr","May","Jun","Jul","Aug","Sep","Oct")))
+
+# preview data
+#summer_o3
+```
+
+# Variograms
+```{r, message=FALSE, warning=FALSE}
+# # create months as spatial object
+coordinates(year_o3) = c('long', 'lat')
+proj4string(year_o3) = CRS(prg)
+year_o3 = spTransform(year_o3, CRS(prg))
+head(year_o3,3)
+
+# create list of column month names 
+cols = names(year_o3)[-c(1:2)]
+
+# create empty list to store variograms
+vgms = vector("list")
+
+# loop thru columns
+# var name = name of each month
+# reformulate to do month~1 -> this is oridinary/simple kriging
+# store in vgms, -> add models
+for(i in seq_along(cols)) {
+  var_name = cols[i]
+  v = autofitVariogram(reformulate("dist2road",var_name),year_o3)
+  vgms[[i]] = v
+}
+# vgms
+
+for(i in seq_along(cols)) {
+  plot(vgms[[i]])
+}
+```
+
+# Krige and Error Results
+```{r, message=FALSE, warning=FALSE}
+grd = SpatialPixels(SpatialPoints(makegrid(den_projected)))
+proj4string(grd) = CRS(prg)
+grd = grd[den_projected,]
+gridded(grd) = TRUE
+plot(grd)
+
+# create empty list to store information
+kriges = vector("list")
+kriges.cv = vector("list")
+rmses = vector("list")
+preds = vector("list")
+vars = vector("list")
+
+# loop thru columns
+# reformulate to create formula based on var_name for each month
+# krige + store
+# krige.cv and rmse + store
+for(i in seq_along(cols)) {
+  var_name = cols[i]
+  k = autoKrige(reformulate("dist2road",var_name),year_o3,grd, model = c("Ste","Sph","Mat","Exp","Nug","Gau","Lin"))
+  k.cv = autoKrige.cv(reformulate("dist2road",var_name),year_o3,model = c("Ste","Sph","Mat","Exp","Nug","Gau","Lin"))
+  rmse = sqrt(mean(k.cv$krige.cv_output$residual^2))
+  mean_mth_pred = mean(k$krige_output$var1.pred)
+  mean_mth_var = mean(k$krige_output$var1.var)
+  kriges[[i]] =  k
+  kriges.cv[[i]] = k.cv
+  rmses[i] = rmse
+  preds[i] = mean_mth_pred
+  vars[i] = mean_mth_var
+}
+
+# plot
+for(i in seq_along(cols)) {
+  month = names(year_o3[,(2+i)])
+  plot(kriges[[i]], ylab = "Semivariance", xlab = month)
+}
+
+# add RMSE, predictions, and variance to gt table
+rmse_tibble = tibble(month_year = cols,
+                     rmse = rmses,
+                     mean_predicted_o3 = preds,
+                     mean_variance_o3 = vars)
+rmse_tibble
+rmse_gt = gt(rmse_tibble)
+rmse_gt
+```
