@@ -5,6 +5,7 @@ path_final = "tiffs/"
 path_cropped = "final_data/"
 
 #Checking to make sure folders exist - creating folders if necessary
+# download.file("URL", "dest", mode = 'wb')
 ifelse(dir.exists(path_start),"Data folder is present",
        "You need to download the data from GridMET and move it into the 'data' folder.")
 ifelse(dir.exists(path_final), "Folder to save files to already exists, proceeding...", dir.create(path_final))
@@ -140,20 +141,20 @@ for (x in sums){
 #   writeRaster(stacked_months,monthly,format = 'GTiff',overwrite = TRUE)
 # }
 
-# A quick check
-test = raster(paste0(path_final,list.files(paste0(path_final)))[1])
-plot(test)
-test2 = raster(paste0(path_cropped,list.files(path_cropped)[11]))
-plot(test2, main="Mean Temperature for CO (Celsius): April 2018")
-
-plot(added_data_projected, main="Maximum Temperature")
-plot(o3_projected, add=TRUE)
-plot(den_projected, add=TRUE)
-
-plot(added_data_projected1, main="Elevation")
-plot(o3_projected, add=TRUE)
-plot(den_projected, add=TRUE)
-
-plot(roads_projected, main = "Roads Network")
-plot(den_projected, col="red", add=TRUE)
-plot(o3_projected, col="green", add=TRUE)
+# Quick checks
+# test = raster(paste0(path_final,list.files(paste0(path_final)))[1])
+# plot(test)
+# test2 = raster(paste0(path_cropped,list.files(path_cropped)[11]))
+# plot(test2, main="Mean Temperature for CO (Celsius): April 2018")
+# 
+# plot(added_data_projected, main="Maximum Temperature")
+# plot(o3_projected, add=TRUE)
+# plot(den_projected, add=TRUE)
+# 
+# plot(added_data_projected1, main="Elevation")
+# plot(o3_projected, add=TRUE)
+# plot(den_projected, add=TRUE)
+# 
+# plot(roads_projected, main = "Roads Network")
+# plot(den_projected, col="red", add=TRUE)
+# plot(o3_projected, col="green", add=TRUE)
