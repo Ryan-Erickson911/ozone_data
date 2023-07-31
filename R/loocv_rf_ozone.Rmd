@@ -43,13 +43,13 @@ ozone_data$date = as.factor(ozone_data$date)
 ozone_data$site_name = as.factor(ozone_data$site_name)
 
 # No dates or Site name
-# rf_model_nd.mda8=as.data.frame(ozone_data[,c(-2:-7,-14:-26)])
+# rf_model_nd.mda8=as.data.frame(ozone_data[,c(-2:-7,-15:-27)])
 ```
 
 ```{r, include=FALSE}
-### Line for Sgnificance
-# line1 = glm(mda8~., data=rf_model_nd.mda8)
-# summary(line1)
+## Line for Sgnificance
+line1 = glm(mda8~., data=ozone_data[,-2:-5])
+summary(line1)
 ```
 
 ```{r, include=FALSE}
@@ -116,6 +116,7 @@ ggplot(both, aes(x = Fold, y = Subject, fill = data)) +
 set.seed(197)
 # kfolds <- groupKFold(ozone_data$site_name, k=8, replace = FALSE) 
 kfolds = create_kfolds(ozone_data$site_name)
+
 in_model <- lapply(kfolds, function(ind, grp) grp[ind], grp = ozone_data$site_name)
 in_model_df <- data.frame(Subject = unlist(in_model), data = "Used for Modeling")
 in_model_df$Fold <- rep(names(in_model), times = unlist(lapply(in_model, length)))
@@ -150,7 +151,6 @@ def_control <- trainControl(
 )
 
 model_tuned = train(mda8~.,data=ozone_data[,c(-2)],method='rf',trControl=def_control)
-
 ```
 
 ### Results
@@ -185,8 +185,8 @@ varImp(model_tuned, scale=FALSE)
 
 ## Tuned Model-2:
 - No site name
-- No NDVI
-- No Combined date (`date`)
+- No Dummies (full date incl.)
+
 ```{r}
 # Creating Seeds
 set.seed(197)
@@ -196,32 +196,10 @@ seeds[[17]]<-sample.int(1000, 1) # for the last model
 
 # Training Model
 def_control <- trainControl(method = 'LOOCV',number = 16,index = kfolds,p = 1,savePredictions = 'final',seed = seeds)
-model_tuned = train(mda8~.,data=ozone_data[,c(-2:-3,-8)],method='rf',trControl=def_control)
+model_tuned = train(mda8~.,data=ozone_data[,c(-2,-4:-5)],method='rf',trControl=def_control)
 # outputs
 ozone_data[model_tuned$pred$rowIndex,]
 
-#### Variable Importance
-varImp(model_tuned, scale=FALSE)
-# caret::predict.train(model_tuned, newdata=grd)
-```
-
-## Tuned Model-3:
-- No site name
-- No NDVI
-- No Roads/ distances
-```{r}
-# Creating Seeds
-set.seed(197)
-seeds <- vector(mode = "list", length = 17) # length is (n_repeats*nresampling) + 1: n_repeats=6 * nresampling=1 +1 = 7 
-for(i in 1:16) seeds[[i]]<- sample.int(n=1000, 3) # the number of tuning parameters
-seeds[[17]]<-sample.int(1000, 1) # for the last model
-
-# Training Model
-def_control <- trainControl(method = 'LOOCV',number = 16,index = kfolds,p = 1,savePredictions = 'final',seed = seeds)
-model_tuned = train(mda8~.,data=ozone_data[,c(-2:-3,-8,-10,-11)],method='rf',trControl=def_control)
-# outputs
-#ozone_data[model_tuned$pred$rowIndex,]
-model_tuned
 #### Variable Importance
 varImp(model_tuned, scale=FALSE)
 # caret::predict.train(model_tuned, newdata=grd)

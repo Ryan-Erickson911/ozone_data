@@ -17,12 +17,22 @@ ifelse(dir.exists(paste0(path_cropped,"Monthly_Averages/")), "Folder to save fin
 ifelse(dir.exists(paste0(path_cropped,"Yearly_Averages/")), "Folder to save final Yearly files to already exists, proceeding...", dir.create(paste0(path_cropped,"Yearly/")))
 ifelse(dir.exists(path_cropped), "Folder to save cropped files to already exists, proceeding...", dir.create(path_cropped))
 
+#Data download
+dl_data = function(var_name,years){
+  NKN_site = "http://thredds.northwestknowledge.net:8080/thredds/fileServer/MET/"
+  website = paste0(NKN_site,var_name,"/",var_name,"_",years,".nc")
+  file_names = sub(paste0(".*/MET/",var_name,"/"), "", website) 
+  for(i in file_names){
+    ifelse(file.exists(paste0(path_start,i)),paste0(i," exists,  skipping..."),download.file(paste0(NKN_site,var_name,"/",i), destfile = paste0(path_start,i), method="curl"))
+  }
+  file_names
+}
+
 # Input Files
-input_nc = list.files(path_start)
-temp_averages = grep("tmmx_",input_nc, value=TRUE)
-rh_averages = grep("rmax_",input_nc, value=TRUE)
-vpd_averages = grep("vpd_",input_nc, value=TRUE)
-sums = grep("pr_",input_nc, value=TRUE)
+temp_averages = dl_data("tmmx",2018:2022)
+rh_averages = dl_data("rmax",2018:2022)
+vpd_averages = dl_data("vpd",2018:2022)
+sums = dl_data("pr",2018:2022)
 # rh_now = grep("rmax_",input_nc, value=TRUE)
 # modes = grep("th_",input_nc, value=TRUE)
 #Mapping Shapefile
@@ -118,9 +128,53 @@ for (x in rh_averages){
   # writeRaster(crop_yearly,output_yr,format = 'GTiff',overwrite = TRUE)
 }
 
+for (x in vpd_averages){
+  ncfile =  ncdf4::nc_open(paste0(path_start,x))
+  varnames = format(as.Date(ncfile$dim$day$vals, origin=as.Date("1900-01-01")),"%B/%d/%Y")
+  nc2raster = stack(paste0(path_start,x))
+  names(nc2raster) = varnames
+  nm = gsub(".nc","",x)
+  # daily = paste0(path_final,"Daily/",nm,"_daily.tiff")
+  monthly = paste0(path_final,"Monthly/",nm,"_monthly_avg.tiff")
+  yearly = paste0(path_final,"Yearly/",nm,"_yearly_avg.tiff")
+  # writeRaster(nc2raster,daily,format = 'GTiff',overwrite = TRUE)
+  
+  # crop_daily = crop(nc2raster,co_bound)
+  # output = paste0(path_cropped,"Daily/",nm,".tiff")
+  # writeRaster(crop,output,format = 'GTiff',overwrite = TRUE)
+  
+  jan_average=mean(nc2raster[[grep("Jan",names(nc2raster))]])
+  feb_average=mean(nc2raster[[grep("Feb",names(nc2raster))]])
+  mar_average=mean(nc2raster[[grep("Mar",names(nc2raster))]])
+  apr_average=mean(nc2raster[[grep("Apr",names(nc2raster))]])
+  may_average=mean(nc2raster[[grep("May",names(nc2raster))]])
+  jun_average=mean(nc2raster[[grep("Jun",names(nc2raster))]])
+  jul_average=mean(nc2raster[[grep("Jul",names(nc2raster))]])
+  aug_average=mean(nc2raster[[grep("Aug",names(nc2raster))]])
+  sep_average=mean(nc2raster[[grep("Sep",names(nc2raster))]])
+  oct_average=mean(nc2raster[[grep("Oct",names(nc2raster))]])
+  nov_average=mean(nc2raster[[grep("Nov",names(nc2raster))]])
+  dec_average=mean(nc2raster[[grep("Dec",names(nc2raster))]])
+  
+  stacked_months=brick(c(jan_average,feb_average,mar_average,apr_average,may_average,jun_average,jul_average,aug_average,sep_average,oct_average,nov_average,dec_average))
+  names(stacked_months) = paste0(month.abb,"_avg")
+  writeRaster(stacked_months, monthly, format = 'GTiff', overwrite = TRUE)
+  
+  crop_monthly = crop(stacked_months,co_bound)
+  output_mo = paste0(path_cropped,"Monthly_Averages/",nm,"_monthly_avg.tiff")
+  writeRaster(crop_monthly,output_mo,format = 'GTiff',overwrite = TRUE)
+  
+  # yearly_average=mean(nc2raster)
+  # writeRaster(yearly_average,yearly,format = 'GTiff',overwrite = TRUE)
+  # 
+  # crop_yearly = crop(yearly_average,co_bound)
+  # output_yr = paste0(path_cropped,"Yearly/",nm,"_yearly_avg.tiff")
+  # writeRaster(crop_yearly,output_yr,format = 'GTiff',overwrite = TRUE)
+}
+
 for (x in sums){
   ncfile =  ncdf4::nc_open(paste0(path_start,x))
-  varnames = format(as.Date(ncfile$dim$day$vals, origin=as.Date("1900-01-01")),"%m/%d/%Y")
+  varnames = format(as.Date(ncfile$dim$day$vals, origin=as.Date("1900-01-01")),"%B/%d/%Y")
   nc2raster = stack(paste0(path_start,x))
   names(nc2raster) = varnames
   nm = gsub(".nc","",x)

@@ -77,14 +77,15 @@ year_o3 = as.data.frame(o3_projected) %>%
 # summer_o3$long
 
 # Spatio-Temporal Variables:
+#fix 2017 issue later
 new_path = "final_data/Monthly_Averages/"
 monthly_path = list.files(paste0(new_path))
-max_rh_files=grep("rmax_",monthly_path, value = T)
-max_temp_files=grep("tmmx_",monthly_path, value = T)
-sum_precip_files=grep("pr_[0-9]+_[A-Za-z]+_sum",monthly_path, value = T)
+max_rh_files=grep("rmax_",monthly_path, value = T)[-1]
+max_temp_files=grep("tmmx_",monthly_path, value = T)[-1]
+vpd_files=grep("vpd_",monthly_path, value = T)
+sum_precip_files=grep("pr_[0-9]+_[A-Za-z]+_sum",monthly_path, value = T)[-1]
 
-renameing_convention = c(paste0(month.abb,".",2017),
-                         paste0(month.abb,".",2018),
+renameing_convention = c(paste0(month.abb,".",2018),
                          paste0(month.abb,".",2019),
                          paste0(month.abb,".",2020),
                          paste0(month.abb,".",2021),
@@ -188,6 +189,21 @@ max_rh=max_rh_projected[[c(grep("2018", names(max_rh_projected)),
 #                                 grep("Sep", names(max_rh)),
 #                                 grep("Oct", names(max_rh)))]]
 
+##################################################  Monthly VPD 
+
+vpd_to_add = stack(paste0(new_path,vpd_files)) # create stack of raster bricks (each "stack" is a year, each "brick" is a month)
+#plots
+# plot(vpd_to_add$vpd_2017_monthly_avg_1.1, main="Vapor Pressure Deficit for Jan 2017")
+vpd_projected = raster::projectRaster(vpd_to_add, crs=prg)
+names(vpd_projected) = renameing_convention
+#plots: after running names() (above code)
+# plot(max_rh_projected$Jan.2017, main="Relative Humidity for Jan 2017")
+vpd_avg=vpd_projected[[c(grep("2018", names(vpd_projected)),
+                           grep("2019", names(vpd_projected)),
+                           grep("2020", names(vpd_projected)),
+                           grep("2021", names(vpd_projected)),
+                           grep("2022", names(vpd_projected)))]]
+
 ################################################## yearly NDVI - Average NDVI 500m buffer - run comments if ndvi is not projected
 
 # Process for creating and extracting NDVIs in R:
@@ -245,81 +261,97 @@ for(i in 1:nrow(site1)) {
   site1$tmax[i] = raster::extract(max_temps[[i]],site1[i,])
   site1$rhmax[i] = raster::extract(max_rh[[i]],site1[i,])
   site1$pmax[i] = raster::extract(total_precip[[i]],site1[i,])
+  site1$vpd[i] = raster::extract(vpd_avg[[i]],site1[i,])
 }
 for(i in 1:nrow(site2)) {
   site2$tmax[i] = raster::extract(max_temps[[i]],site2[i,])
   site2$rhmax[i] = raster::extract(max_rh[[i]],site2[i,])
   site2$pmax[i] = raster::extract(total_precip[[i]],site2[i,])
+  site2$vpd[i] = raster::extract(vpd_avg[[i]],site2[i,])
 }
 for(i in 1:nrow(site3)) {
   site3$tmax[i] = raster::extract(max_temps[[i]],site3[i,])
   site3$rhmax[i] = raster::extract(max_rh[[i]],site3[i,])
   site3$pmax[i] = raster::extract(total_precip[[i]],site3[i,])
+  site3$vpd[i] = raster::extract(vpd_avg[[i]],site3[i,])
 }
 for(i in 1:nrow(site4)) {
   site4$tmax[i] = raster::extract(max_temps[[i]],site4[i,])
   site4$rhmax[i] = raster::extract(max_rh[[i]],site4[i,])
   site4$pmax[i] = raster::extract(total_precip[[i]],site4[i,])
+  site4$vpd[i] = raster::extract(vpd_avg[[i]],site4[i,])
 }
 for(i in 1:nrow(site5)) {
   site5$tmax[i] = raster::extract(max_temps[[i]],site5[i,])
   site5$rhmax[i] = raster::extract(max_rh[[i]],site5[i,])
   site5$pmax[i] = raster::extract(total_precip[[i]],site5[i,])
+  site5$vpd[i] = raster::extract(vpd_avg[[i]],site5[i,])
 }
 for(i in 1:nrow(site6)) {
   site6$tmax[i] = raster::extract(max_temps[[i]],site6[i,])
   site6$rhmax[i] = raster::extract(max_rh[[i]],site6[i,])
   site6$pmax[i] = raster::extract(total_precip[[i]],site6[i,])
+  site6$vpd[i] = raster::extract(vpd_avg[[i]],site6[i,])
 }
 for(i in 1:nrow(site7)) {
   site7$tmax[i] = raster::extract(max_temps[[i]],site7[i,])
   site7$rhmax[i] = raster::extract(max_rh[[i]],site7[i,])
   site7$pmax[i] = raster::extract(total_precip[[i]],site7[i,])
+  site7$vpd[i] = raster::extract(vpd_avg[[i]],site7[i,])
 }
 for(i in 1:nrow(site8)) {
   site8$tmax[i] = raster::extract(max_temps[[i]],site8[i,])
   site8$rhmax[i] = raster::extract(max_rh[[i]],site8[i,])
   site8$pmax[i] = raster::extract(total_precip[[i]],site8[i,])
+  site8$vpd[i] = raster::extract(vpd_avg[[i]],site8[i,])
 }
 for(i in 1:nrow(site9)) {
   site9$tmax[i] = raster::extract(max_temps[[i]],site9[i,])
   site9$rhmax[i] = raster::extract(max_rh[[i]],site9[i,])
   site9$pmax[i] = raster::extract(total_precip[[i]],site9[i,])
+  site9$vpd[i] = raster::extract(vpd_avg[[i]],site9[i,])
 }
 for(i in 1:nrow(site10)) {
   site10$tmax[i] = raster::extract(max_temps[[i]],site10[i,])
   site10$rhmax[i] = raster::extract(max_rh[[i]],site10[i,])
   site10$pmax[i] = raster::extract(total_precip[[i]],site10[i,])
+  site10$vpd[i] = raster::extract(vpd_avg[[i]],site10[i,])
 }
 for(i in 1:nrow(site11)) {
   site11$tmax[i] = raster::extract(max_temps[[i]],site11[i,])
   site11$rhmax[i] = raster::extract(max_rh[[i]],site11[i,])
   site11$pmax[i] = raster::extract(total_precip[[i]],site11[i,])
+  site11$vpd[i] = raster::extract(vpd_avg[[i]],site11[i,])
 }
 for(i in 1:nrow(site12)) {
   site12$tmax[i] = raster::extract(max_temps[[i]],site12[i,])
   site12$rhmax[i] = raster::extract(max_rh[[i]],site12[i,])
   site12$pmax[i] = raster::extract(total_precip[[i]],site12[i,])
+  site12$vpd[i] = raster::extract(vpd_avg[[i]],site12[i,])
 }
 for(i in 1:nrow(site13)) {
   site13$tmax[i] = raster::extract(max_temps[[i]],site13[i,])
   site13$rhmax[i] = raster::extract(max_rh[[i]],site13[i,])
   site13$pmax[i] = raster::extract(total_precip[[i]],site13[i,])
+  site13$vpd[i] = raster::extract(vpd_avg[[i]],site13[i,])
 }
 for(i in 1:nrow(site14)) {
   site14$tmax[i] = raster::extract(max_temps[[i]],site14[i,])
   site14$rhmax[i] = raster::extract(max_rh[[i]],site14[i,])
   site14$pmax[i] = raster::extract(total_precip[[i]],site14[i,])
+  site14$vpd[i] = raster::extract(vpd_avg[[i]],site14[i,])
 }
 for(i in 1:nrow(site15)) {
   site15$tmax[i] = raster::extract(max_temps[[i]],site15[i,])
   site15$rhmax[i] = raster::extract(max_rh[[i]],site15[i,])
   site15$pmax[i] = raster::extract(total_precip[[i]],site15[i,])
+  site15$vpd[i] = raster::extract(vpd_avg[[i]],site15[i,])
 }
 for(i in 1:nrow(site16)) {
   site16$tmax[i] = raster::extract(max_temps[[i]],site16[i,])
   site16$rhmax[i] = raster::extract(max_rh[[i]],site16[i,])
   site16$pmax[i] = raster::extract(total_precip[[i]],site16[i,])
+  site16$vpd[i] = raster::extract(vpd_avg[[i]],site16[i,])
 }
 ggs = as.data.frame(rbind(site1,
                           site2,
